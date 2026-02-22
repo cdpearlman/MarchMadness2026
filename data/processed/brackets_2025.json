@@ -1,0 +1,428 @@
+[
+  {
+    "strategy": "Greedy EV (chalk)",
+    "expected_score": 91.48,
+    "notes": [
+      "Maximizes expected score at every matchup",
+      "Best single bracket"
+    ],
+    "picks": {
+      "1": [
+        "DePaul",
+        "UConn",
+        "Clemson",
+        "Yale",
+        "Ole Miss",
+        "Iowa State",
+        "Marquette",
+        "Georgetown",
+        "Illinois State",
+        "Creighton",
+        "Colorado State",
+        "Grand Canyon",
+        "Texas",
+        "Texas Tech",
+        "UCLA",
+        "St. John's",
+        "Dayton",
+        "Baylor",
+        "Michigan",
+        "Akron",
+        "North Carolina",
+        "Colorado",
+        "Kansas",
+        "Bryant",
+        "Utah",
+        "Louisville",
+        "Memphis",
+        "High Point",
+        "Illinois",
+        "Kentucky",
+        "Arkansas",
+        "Tulane"
+      ],
+      "2": [
+        "UConn",
+        "Clemson",
+        "Ole Miss",
+        "Marquette",
+        "Creighton",
+        "Colorado State",
+        "Texas Tech",
+        "UCLA",
+        "Baylor",
+        "Michigan",
+        "North Carolina",
+        "Kansas",
+        "Louisville",
+        "Memphis",
+        "Kentucky",
+        "Arkansas"
+      ],
+      "3": [
+        "UConn",
+        "Ole Miss",
+        "Creighton",
+        "UCLA",
+        "Michigan",
+        "North Carolina",
+        "Memphis",
+        "Kentucky"
+      ],
+      "4": [
+        "Ole Miss",
+        "UCLA",
+        "Michigan",
+        "Kentucky"
+      ],
+      "5": [
+        "Ole Miss",
+        "Kentucky"
+      ],
+      "6": [
+        "Ole Miss"
+      ]
+    }
+  },
+  {
+    "strategy": "Greedy EV (chalk)",
+    "expected_score": 91.48,
+    "notes": [
+      "Maximizes expected score at every matchup",
+      "Best single bracket"
+    ],
+    "picks": {
+      "1": [
+        "DePaul",
+        "UConn",
+        "Clemson",
+        "Yale",
+        "Ole Miss",
+        "Iowa State",
+        "Marquette",
+        "Georgetown",
+        "Illinois State",
+        "Creighton",
+        "Colorado State",
+        "Grand Canyon",
+        "Texas",
+        "Texas Tech",
+        "UCLA",
+        "St. John's",
+        "Dayton",
+        "Baylor",
+        "Michigan",
+        "Akron",
+        "North Carolina",
+        "Colorado",
+        "Kansas",
+        "Bryant",
+        "Utah",
+        "Louisville",
+        "Memphis",
+        "High Point",
+        "Illinois",
+        "Kentucky",
+        "Arkansas",
+        "Tulane"
+      ],
+      "2": [
+        "UConn",
+        "Clemson",
+        "Ole Miss",
+        "Marquette",
+        "Creighton",
+        "Colorado State",
+        "Texas Tech",
+        "UCLA",
+        "Baylor",
+        "Michigan",
+        "North Carolina",
+        "Kansas",
+        "Louisville",
+        "Memphis",
+        "Kentucky",
+        "Arkansas"
+      ],
+      "3": [
+        "UConn",
+        "Ole Miss",
+        "Creighton",
+        "UCLA",
+        "Michigan",
+        "North Carolina",
+        "Memphis",
+        "Kentucky"
+      ],
+      "4": [
+        "Ole Miss",
+        "UCLA",
+        "Michigan",
+        "Kentucky"
+      ],
+      "5": [
+        "Ole Miss",
+        "Kentucky"
+      ],
+      "6": [
+        "Ole Miss"
+      ]
+    }
+  },
+  {
+    "strategy": "Upset Special: Ole Miss (#6)",
+    "expected_score": 91.48,
+    "notes": [
+      "Built around Ole Miss (#6 seed) making a deep run",
+      "Elite Eight probability: 49.3%",
+      "Championship probability: 20.0%"
+    ],
+    "picks": {
+      "1": [
+        "DePaul",
+        "UConn",
+        "Clemson",
+        "Yale",
+        "Ole Miss",
+        "Iowa State",
+        "Marquette",
+        "Georgetown",
+        "Illinois State",
+        "Creighton",
+        "Colorado State",
+        "Grand Canyon",
+        "Texas",
+        "Texas Tech",
+        "UCLA",
+        "St. John's",
+        "Dayton",
+        "Baylor",
+        "Michigan",
+        "Akron",
+        "North Carolina",
+        "Colorado",
+        "Kansas",
+        "Bryant",
+        "Utah",
+        "Louisville",
+        "Memphis",
+        "High Point",
+        "Illinois",
+        "Kentucky",
+        "Arkansas",
+        "Tulane"
+      ],
+      "2": [
+        "UConn",
+        "Clemson",
+        "Ole Miss",
+        "Marquette",
+        "Creighton",
+        "Colorado State",
+        "Texas Tech",
+        "UCLA",
+        "Baylor",
+        "Michigan",
+        "North Carolina",
+        "Kansas",
+        "Louisville",
+        "Memphis",
+        "Kentucky",
+        "Arkansas"
+      ],
+      "3": [
+        "UConn",
+        "Ole Miss",
+        "Creighton",
+        "UCLA",
+        "Michigan",
+        "North Carolina",
+        "Memphis",
+        "Kentucky"
+      ],
+      "4": [
+        "Ole Miss",
+        "UCLA",
+        "Michigan",
+        "Kentucky"
+      ],
+      "5": [
+        "Ole Miss",
+        "Kentucky"
+      ],
+      "6": [
+        "Ole Miss"
+      ]
+    }
+  },
+  {
+    "strategy": "Upset Run: UCLA (#7) to Final Four",
+    "expected_score": 91.48,
+    "notes": [
+      "UCLA (#7) goes deep but doesn't win it all",
+      "Final Four probability: 27.8%"
+    ],
+    "picks": {
+      "1": [
+        "DePaul",
+        "UConn",
+        "Clemson",
+        "Yale",
+        "Ole Miss",
+        "Iowa State",
+        "Marquette",
+        "Georgetown",
+        "Illinois State",
+        "Creighton",
+        "Colorado State",
+        "Grand Canyon",
+        "Texas",
+        "Texas Tech",
+        "UCLA",
+        "St. John's",
+        "Dayton",
+        "Baylor",
+        "Michigan",
+        "Akron",
+        "North Carolina",
+        "Colorado",
+        "Kansas",
+        "Bryant",
+        "Utah",
+        "Louisville",
+        "Memphis",
+        "High Point",
+        "Illinois",
+        "Kentucky",
+        "Arkansas",
+        "Tulane"
+      ],
+      "2": [
+        "UConn",
+        "Clemson",
+        "Ole Miss",
+        "Marquette",
+        "Creighton",
+        "Colorado State",
+        "Texas Tech",
+        "UCLA",
+        "Baylor",
+        "Michigan",
+        "North Carolina",
+        "Kansas",
+        "Louisville",
+        "Memphis",
+        "Kentucky",
+        "Arkansas"
+      ],
+      "3": [
+        "UConn",
+        "Ole Miss",
+        "Creighton",
+        "UCLA",
+        "Michigan",
+        "North Carolina",
+        "Memphis",
+        "Kentucky"
+      ],
+      "4": [
+        "Ole Miss",
+        "UCLA",
+        "Michigan",
+        "Kentucky"
+      ],
+      "5": [
+        "Ole Miss",
+        "Kentucky"
+      ],
+      "6": [
+        "Ole Miss"
+      ]
+    }
+  },
+  {
+    "strategy": "Wildcard: Texas Tech wins, upset run included",
+    "expected_score": 86.64,
+    "notes": [
+      "Most divergent from bracket #1",
+      "Champion: Texas Tech (11.9% probability)"
+    ],
+    "picks": {
+      "1": [
+        "DePaul",
+        "UConn",
+        "Clemson",
+        "Yale",
+        "Ole Miss",
+        "Iowa State",
+        "Marquette",
+        "Georgetown",
+        "Illinois State",
+        "Creighton",
+        "Colorado State",
+        "Grand Canyon",
+        "Texas",
+        "Texas Tech",
+        "UCLA",
+        "St. John's",
+        "Dayton",
+        "Baylor",
+        "Michigan",
+        "Akron",
+        "North Carolina",
+        "Colorado",
+        "Kansas",
+        "Bryant",
+        "Utah",
+        "Louisville",
+        "Memphis",
+        "High Point",
+        "Illinois",
+        "Kentucky",
+        "Arkansas",
+        "Tulane"
+      ],
+      "2": [
+        "UConn",
+        "Clemson",
+        "Ole Miss",
+        "Marquette",
+        "Creighton",
+        "Colorado State",
+        "Texas Tech",
+        "UCLA",
+        "Baylor",
+        "Michigan",
+        "North Carolina",
+        "Kansas",
+        "Louisville",
+        "Memphis",
+        "Kentucky",
+        "Arkansas"
+      ],
+      "3": [
+        "UConn",
+        "Ole Miss",
+        "Creighton",
+        "Texas Tech",
+        "Michigan",
+        "North Carolina",
+        "Memphis",
+        "Kentucky"
+      ],
+      "4": [
+        "Ole Miss",
+        "Texas Tech",
+        "Michigan",
+        "Kentucky"
+      ],
+      "5": [
+        "Texas Tech",
+        "Kentucky"
+      ],
+      "6": [
+        "Texas Tech"
+      ]
+    }
+  }
+]
