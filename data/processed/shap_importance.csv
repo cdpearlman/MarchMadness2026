@@ -1,0 +1,25 @@
+feature,mean_abs_shap
+diff_Net Rating,2.6140306
+diff_Pre-Tournament.AdjEM,1.0696096
+diff_OppFG3Pct,0.14778079
+diff_Pre-Tournament.AdjDE,0.13330561
+diff_FG3Rate,0.121128194
+diff_OppStlRate,0.114975296
+diff_OppFTPct,0.112579145
+diff_OppFG2Pct,0.09870256
+diff_StlRate,0.09152313
+diff_FTRate,0.08933479
+diff_OppBlockPct,0.07904747
+diff_FTPct,0.07773457
+diff_BlockPct,0.06895294
+diff_FG2Pct,0.06738872
+diff_SeedNum,0.062528
+diff_Pre-Tournament.AdjOE,0.058702238
+diff_EffectiveHeight,0.058588184
+diff_OppFG3Rate,0.050338846
+diff_TOPct,0.050141454
+diff_Pre-Tournament.AdjTempo,0.050098997
+diff_ORPct,0.04279242
+diff_Experience,0.033632416
+diff_FG3Pct,0.028628675
+diff_eFGPct,0.02607716

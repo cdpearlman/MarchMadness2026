@@ -1,0 +1,370 @@
+ESPNName,TeamID,ManiaTeamName,MatchMethod
+Abilene Christian,1101,Abilene Chr,spellings_exact
+Air Force,1102,Air Force,spellings_exact
+Akron,1103,Akron,spellings_exact
+Alabama,1104,Alabama,spellings_exact
+Alabama A&M,1105,Alabama A&M,spellings_exact
+Alabama State,1106,Alabama St,spellings_exact
+Alcorn State,1108,Alcorn St,spellings_exact
+American University,1110,American Univ,spellings_exact
+App State,1111,Appalachian St,manual_override
+Arizona,1112,Arizona,spellings_exact
+Arizona State,1113,Arizona St,spellings_exact
+Arkansas,1116,Arkansas,spellings_exact
+Arkansas State,1117,Arkansas St,spellings_exact
+Arkansas-Pine Bluff,1115,Ark Pine Bluff,spellings_exact
+Army,1119,Army,spellings_exact
+Auburn,1120,Auburn,spellings_exact
+Austin Peay,1122,Austin Peay,spellings_exact
+BYU,1140,BYU,spellings_exact
+Ball State,1123,Ball St,spellings_exact
+Baylor,1124,Baylor,spellings_exact
+Bellarmine,1468,Bellarmine,spellings_exact
+Belmont,1125,Belmont,spellings_exact
+Bethune-Cookman,1126,Bethune-Cookman,spellings_exact
+Binghamton,1127,Binghamton,spellings_exact
+Birmingham-Southern,1128,Birmingham So,spellings_exact
+Boise State,1129,Boise St,spellings_exact
+Boston College,1130,Boston College,spellings_exact
+Boston University,1131,Boston Univ,spellings_exact
+Bowling Green,1132,Bowling Green,spellings_exact
+Bradley,1133,Bradley,spellings_exact
+Brown,1135,Brown,spellings_exact
+Bryant,1136,Bryant,spellings_exact
+Bucknell,1137,Bucknell,spellings_exact
+Buffalo,1138,Buffalo,spellings_exact
+Butler,1139,Butler,spellings_exact
+Cal Poly,1142,Cal Poly,spellings_exact
+Cal State Bakersfield,1167,CS Bakersfield,spellings_exact
+Cal State Fullerton,1168,CS Fullerton,spellings_exact
+Cal State Northridge,1169,CS Northridge,spellings_exact
+California,1143,California,spellings_exact
+California Baptist,1465,Cal Baptist,spellings_exact
+Campbell,1144,Campbell,spellings_exact
+Canisius,1145,Canisius,spellings_exact
+Central Arkansas,1146,Cent Arkansas,spellings_exact
+Central Connecticut,1148,Central Conn,spellings_exact
+Central Michigan,1141,C Michigan,spellings_exact
+Charleston,1158,Col Charleston,spellings_exact
+Charleston Southern,1149,Charleston So,spellings_exact
+Charlotte,1150,Charlotte,spellings_exact
+Chattanooga,1151,Chattanooga,spellings_exact
+Chicago State,1152,Chicago St,spellings_exact
+Cincinnati,1153,Cincinnati,spellings_exact
+Clemson,1155,Clemson,spellings_exact
+Cleveland State,1156,Cleveland St,spellings_exact
+Coastal Carolina,1157,Coastal Car,spellings_exact
+Colgate,1159,Colgate,spellings_exact
+Colorado,1160,Colorado,spellings_exact
+Colorado State,1161,Colorado St,spellings_exact
+Columbia,1162,Columbia,spellings_exact
+Coppin State,1164,Coppin St,spellings_exact
+Cornell,1165,Cornell,spellings_exact
+Creighton,1166,Creighton,spellings_exact
+Dartmouth,1171,Dartmouth,spellings_exact
+Davidson,1172,Davidson,spellings_exact
+Dayton,1173,Dayton,spellings_exact
+DePaul,1177,DePaul,spellings_exact
+Delaware,1174,Delaware,spellings_exact
+Delaware State,1175,Delaware St,spellings_exact
+Denver,1176,Denver,spellings_exact
+Detroit Mercy,1178,Detroit,spellings_exact
+Drake,1179,Drake,spellings_exact
+Drexel,1180,Drexel,spellings_exact
+Duke,1181,Duke,spellings_exact
+Duquesne,1182,Duquesne,spellings_exact
+East Carolina,1187,East Carolina,spellings_exact
+East Tennessee State,1190,ETSU,spellings_exact
+East Texas A&M,1477,East Texas A&M,spellings_exact
+Eastern Illinois,1183,E Illinois,spellings_exact
+Eastern Kentucky,1184,E Kentucky,spellings_exact
+Eastern Michigan,1185,E Michigan,spellings_exact
+Eastern Washington,1186,E Washington,spellings_exact
+Elon,1189,Elon,spellings_exact
+Evansville,1191,Evansville,spellings_exact
+Fairfield,1193,Fairfield,spellings_exact
+Fairleigh Dickinson,1192,F Dickinson,spellings_exact
+Florida,1196,Florida,spellings_exact
+Florida A&M,1197,Florida A&M,spellings_exact
+Florida Atlantic,1194,FL Atlantic,spellings_exact
+Florida Gulf Coast,1195,FGCU,spellings_exact
+Florida International,1198,Florida Intl,spellings_exact
+Florida State,1199,Florida St,spellings_exact
+Fordham,1200,Fordham,spellings_exact
+Fresno State,1201,Fresno St,spellings_exact
+Furman,1202,Furman,spellings_exact
+Gardner-Webb,1205,Gardner Webb,spellings_exact
+George Mason,1206,George Mason,spellings_exact
+George Washington,1203,G Washington,spellings_exact
+Georgetown,1207,Georgetown,spellings_exact
+Georgia,1208,Georgia,spellings_exact
+Georgia Southern,1204,Ga Southern,spellings_exact
+Georgia State,1209,Georgia St,spellings_exact
+Georgia Tech,1210,Georgia Tech,spellings_exact
+Gonzaga,1211,Gonzaga,spellings_exact
+Grambling,1212,Grambling,spellings_exact
+Grand Canyon,1213,Grand Canyon,spellings_exact
+Green Bay,1453,WI Green Bay,spellings_exact
+Hampton,1214,Hampton,spellings_exact
+Hartford,1216,Hartford,spellings_exact
+Harvard,1217,Harvard,spellings_exact
+Hawaii,1218,Hawaii,spellings_exact
+High Point,1219,High Point,spellings_exact
+Hofstra,1220,Hofstra,spellings_exact
+Holy Cross,1221,Holy Cross,spellings_exact
+Houston,1222,Houston,spellings_exact
+Houston Christian,1223,Houston Chr,spellings_exact
+Howard,1224,Howard,spellings_exact
+IU Indianapolis,1237,IUPUI,spellings_exact
+Idaho,1225,Idaho,spellings_exact
+Idaho State,1226,Idaho St,spellings_exact
+Illinois,1228,Illinois,spellings_exact
+Illinois State,1229,Illinois St,spellings_exact
+Incarnate Word,1230,Incarnate Word,spellings_exact
+Indiana,1231,Indiana,spellings_exact
+Indiana State,1232,Indiana St,spellings_exact
+Iona,1233,Iona,spellings_exact
+Iowa,1234,Iowa,spellings_exact
+Iowa State,1235,Iowa St,spellings_exact
+Jackson State,1238,Jackson St,spellings_exact
+Jacksonville,1239,Jacksonville,spellings_exact
+Jacksonville State,1240,Jacksonville St,spellings_exact
+James Madison,1241,James Madison,spellings_exact
+Kansas,1242,Kansas,spellings_exact
+Kansas City,1282,Missouri KC,spellings_exact
+Kansas State,1243,Kansas St,spellings_exact
+Kennesaw State,1244,Kennesaw,spellings_exact
+Kent State,1245,Kent,spellings_exact
+Kentucky,1246,Kentucky,spellings_exact
+LSU,1261,LSU,spellings_exact
+La Salle,1247,La Salle,spellings_exact
+Lafayette,1248,Lafayette,spellings_exact
+Lamar,1249,Lamar,spellings_exact
+Le Moyne,1478,Le Moyne,spellings_exact
+Lehigh,1250,Lehigh,spellings_exact
+Liberty,1251,Liberty,spellings_exact
+Lindenwood,1473,Lindenwood,spellings_exact
+Lipscomb,1252,Lipscomb,spellings_exact
+Little Rock,1114,Ark Little Rock,spellings_exact
+Long Beach State,1253,Long Beach St,spellings_exact
+Long Island University,1254,LIU Brooklyn,spellings_exact
+Longwood,1255,Longwood,spellings_exact
+Louisiana,1418,Louisiana,spellings_exact
+Louisiana Tech,1256,Louisiana Tech,spellings_exact
+Louisville,1257,Louisville,spellings_exact
+Loyola Chicago,1260,Loyola-Chicago,spellings_exact
+Loyola Maryland,1259,Loyola MD,spellings_exact
+Loyola Marymount,1258,Loy Marymount,spellings_exact
+Maine,1263,Maine,spellings_exact
+Manhattan,1264,Manhattan,spellings_exact
+Marist,1265,Marist,spellings_exact
+Marquette,1266,Marquette,spellings_exact
+Marshall,1267,Marshall,spellings_exact
+Maryland,1268,Maryland,spellings_exact
+Maryland Eastern Shore,1271,MD E Shore,spellings_exact
+Massachusetts,1269,Massachusetts,spellings_exact
+McNeese,1270,McNeese St,spellings_exact
+Memphis,1272,Memphis,spellings_exact
+Mercer,1273,Mercer,spellings_exact
+Mercyhurst,1479,Mercyhurst,spellings_exact
+Merrimack,1467,Merrimack,spellings_exact
+Miami,1274,Miami FL,manual_override
+Miami (OH),1275,Miami OH,spellings_exact
+Michigan,1276,Michigan,spellings_exact
+Michigan State,1277,Michigan St,spellings_exact
+Middle Tennessee,1292,MTSU,spellings_exact
+Milwaukee,1454,WI Milwaukee,spellings_exact
+Minnesota,1278,Minnesota,spellings_exact
+Mississippi State,1280,Mississippi St,spellings_exact
+Mississippi Valley State,1290,MS Valley St,spellings_exact
+Missouri,1281,Missouri,spellings_exact
+Missouri State,1283,Missouri St,spellings_exact
+Monmouth,1284,Monmouth NJ,spellings_exact
+Montana,1285,Montana,spellings_exact
+Montana State,1286,Montana St,spellings_exact
+Morehead State,1287,Morehead St,spellings_exact
+Morgan State,1288,Morgan St,spellings_exact
+Morris Brown,1289,Morris Brown,spellings_exact
+Mount St. Mary's,1291,Mt St Mary's,spellings_exact
+Murray State,1293,Murray St,spellings_exact
+NC State,1301,NC State,spellings_exact
+NJIT,1312,NJIT,spellings_exact
+Navy,1298,Navy,spellings_exact
+Nebraska,1304,Nebraska,spellings_exact
+Nevada,1305,Nevada,spellings_exact
+New Hampshire,1306,New Hampshire,spellings_exact
+New Mexico,1307,New Mexico,spellings_exact
+New Mexico State,1308,New Mexico St,spellings_exact
+New Orleans,1309,New Orleans,spellings_exact
+Niagara,1310,Niagara,spellings_exact
+Nicholls,1311,Nicholls St,spellings_exact
+Norfolk State,1313,Norfolk St,spellings_exact
+North Alabama,1466,North Alabama,spellings_exact
+North Carolina,1314,North Carolina,spellings_exact
+North Carolina A&T,1299,NC A&T,spellings_exact
+North Carolina Central,1300,NC Central,spellings_exact
+North Dakota,1315,North Dakota,spellings_exact
+North Dakota State,1295,N Dakota St,spellings_exact
+North Florida,1316,North Florida,spellings_exact
+North Texas,1317,North Texas,spellings_exact
+Northeastern,1318,Northeastern,spellings_exact
+Northern Arizona,1319,Northern Arizona,spellings_exact
+Northern Colorado,1294,N Colorado,spellings_exact
+Northern Illinois,1296,N Illinois,spellings_exact
+Northern Iowa,1320,Northern Iowa,spellings_exact
+Northern Kentucky,1297,N Kentucky,spellings_exact
+Northwestern,1321,Northwestern,spellings_exact
+Northwestern State,1322,Northwestern LA,spellings_exact
+Notre Dame,1323,Notre Dame,spellings_exact
+Oakland,1324,Oakland,spellings_exact
+Ohio,1325,Ohio,spellings_exact
+Ohio State,1326,Ohio St,spellings_exact
+Oklahoma,1328,Oklahoma,spellings_exact
+Oklahoma State,1329,Oklahoma St,spellings_exact
+Old Dominion,1330,Old Dominion,spellings_exact
+Ole Miss,1279,Mississippi,spellings_exact
+Omaha,1303,NE Omaha,spellings_exact
+Oral Roberts,1331,Oral Roberts,spellings_exact
+Oregon,1332,Oregon,spellings_exact
+Oregon State,1333,Oregon St,spellings_exact
+Pacific,1334,Pacific,spellings_exact
+Penn State,1336,Penn St,spellings_exact
+Pennsylvania,1335,Penn,spellings_exact
+Pepperdine,1337,Pepperdine,spellings_exact
+Pittsburgh,1338,Pittsburgh,spellings_exact
+Portland,1339,Portland,spellings_exact
+Portland State,1340,Portland St,spellings_exact
+Prairie View A&M,1341,Prairie View,spellings_exact
+Presbyterian,1342,Presbyterian,spellings_exact
+Princeton,1343,Princeton,spellings_exact
+Providence,1344,Providence,spellings_exact
+Purdue,1345,Purdue,spellings_exact
+Purdue Fort Wayne,1236,PFW,spellings_exact
+Queens University,1361,San Diego St,manual_override
+Quinnipiac,1346,Quinnipiac,spellings_exact
+Radford,1347,Radford,spellings_exact
+Rhode Island,1348,Rhode Island,spellings_exact
+Rice,1349,Rice,spellings_exact
+Richmond,1350,Richmond,spellings_exact
+Rider,1351,Rider,spellings_exact
+Robert Morris,1352,Robert Morris,spellings_exact
+Rutgers,1353,Rutgers,spellings_exact
+SE Louisiana,1368,SE Louisiana,spellings_exact
+SIU Edwardsville,1188,SIUE,spellings_exact
+SMU,1374,SMU,spellings_exact
+Sacramento State,1170,CS Sacramento,spellings_exact
+Sacred Heart,1357,Sacred Heart,spellings_exact
+Saint Joseph's,1386,St Joseph's PA,spellings_exact
+Saint Louis,1387,St Louis,spellings_exact
+Saint Mary's,1388,St Mary's CA,spellings_exact
+Saint Peter's,1389,St Peter's,spellings_exact
+Sam Houston,1358,Sam Houston St,spellings_exact
+Samford,1359,Samford,spellings_exact
+San Diego,1360,San Diego,spellings_exact
+San Diego State,1361,San Diego St,spellings_exact
+San Francisco,1362,San Francisco,spellings_exact
+San Jose State,1363,San Jose St,spellings_exact
+Santa Clara,1365,Santa Clara,spellings_exact
+Savannah State,1366,Savannah St,spellings_exact
+Seattle U,1370,Seattle,spellings_exact
+Seton Hall,1371,Seton Hall,spellings_exact
+Siena,1373,Siena,spellings_exact
+South Alabama,1375,South Alabama,spellings_exact
+South Carolina,1376,South Carolina,spellings_exact
+South Carolina State,1354,S Carolina St,spellings_exact
+South Carolina Upstate,1367,SC Upstate,spellings_exact
+South Dakota,1377,South Dakota,spellings_exact
+South Dakota State,1355,S Dakota St,spellings_exact
+South Florida,1378,South Florida,spellings_exact
+Southeast Missouri State,1369,SE Missouri St,spellings_exact
+Southern,1380,Southern Univ,spellings_exact
+Southern Illinois,1356,S Illinois,spellings_exact
+Southern Indiana,1475,Southern Indiana,spellings_exact
+Southern Miss,1379,Southern Miss,spellings_exact
+Southern Utah,1381,Southern Utah,spellings_exact
+St. Bonaventure,1382,St Bonaventure,spellings_exact
+St. Francis (NY),1383,St Francis NY,spellings_exact
+St. Francis (PA),1384,St Francis PA,spellings_exact
+St. John's,1385,St John's,spellings_exact
+St. Thomas-Minnesota,1384,St Francis PA,manual_override
+Stanford,1390,Stanford,spellings_exact
+Stephen F. Austin,1372,SF Austin,spellings_exact
+Stetson,1391,Stetson,spellings_exact
+Stonehill,1476,Stonehill,spellings_exact
+Stony Brook,1392,Stony Brook,spellings_exact
+Syracuse,1393,Syracuse,spellings_exact
+TCU,1395,TCU,spellings_exact
+Tarleton State,1470,Tarleton St,spellings_exact
+Temple,1396,Temple,spellings_exact
+Tennessee,1397,Tennessee,spellings_exact
+Tennessee State,1398,Tennessee St,spellings_exact
+Tennessee Tech,1399,Tennessee Tech,spellings_exact
+Texas,1400,Texas,spellings_exact
+Texas A&M,1401,Texas A&M,spellings_exact
+Texas A&M-Corpus Christi,1394,TAM C. Christi,spellings_exact
+Texas Southern,1411,TX Southern,spellings_exact
+Texas State,1402,Texas St,spellings_exact
+Texas Tech,1403,Texas Tech,spellings_exact
+The Citadel,1154,Citadel,spellings_exact
+Toledo,1405,Toledo,spellings_exact
+Towson,1406,Towson,spellings_exact
+Troy,1407,Troy,spellings_exact
+Tulane,1408,Tulane,spellings_exact
+Tulsa,1409,Tulsa,spellings_exact
+UAB,1412,UAB,spellings_exact
+UAlbany,1107,SUNY Albany,manual_override
+UC Davis,1413,UC Davis,spellings_exact
+UC Irvine,1414,UC Irvine,spellings_exact
+UC Riverside,1415,UC Riverside,spellings_exact
+UC San Diego,1471,UC San Diego,spellings_exact
+UC Santa Barbara,1364,UC Santa Barbara,spellings_exact
+UCF,1416,UCF,spellings_exact
+UCLA,1417,UCLA,spellings_exact
+UConn,1163,Connecticut,spellings_exact
+UIC,1227,IL Chicago,spellings_exact
+UL Monroe,1349,Rice,manual_override
+UMBC,1420,UMBC,spellings_exact
+UMass Lowell,1262,MA Lowell,spellings_exact
+UNC Asheville,1421,UNC Asheville,spellings_exact
+UNC Greensboro,1422,UNC Greensboro,spellings_exact
+UNC Wilmington,1423,UNC Wilmington,spellings_exact
+UNLV,1424,UNLV,spellings_exact
+USC,1425,USC,spellings_exact
+UT Arlington,1426,UT Arlington,spellings_exact
+UT Martin,1404,TN Martin,spellings_exact
+UT Rio Grande Valley,1396,Temple,manual_override
+UTEP,1431,UTEP,spellings_exact
+UTSA,1427,UT San Antonio,spellings_exact
+Utah,1428,Utah,spellings_exact
+Utah State,1429,Utah St,spellings_exact
+Utah Tech,1469,Utah Tech,spellings_exact
+Utah Valley,1430,Utah Valley,spellings_exact
+VCU,1433,VCU,spellings_exact
+VMI,1440,VMI,spellings_exact
+Valparaiso,1434,Valparaiso,spellings_exact
+Vanderbilt,1435,Vanderbilt,spellings_exact
+Vermont,1436,Vermont,spellings_exact
+Villanova,1437,Villanova,spellings_exact
+Virginia,1438,Virginia,spellings_exact
+Virginia Tech,1439,Virginia Tech,spellings_exact
+Wagner,1447,Wagner,spellings_exact
+Wake Forest,1448,Wake Forest,spellings_exact
+Washington,1449,Washington,spellings_exact
+Washington State,1450,Washington St,spellings_exact
+Weber State,1451,Weber St,spellings_exact
+West Georgia,1480,West Georgia,spellings_exact
+West Virginia,1452,West Virginia,spellings_exact
+Western Carolina,1441,W Carolina,spellings_exact
+Western Illinois,1442,W Illinois,spellings_exact
+Western Kentucky,1443,WKU,spellings_exact
+Western Michigan,1444,W Michigan,spellings_exact
+Wichita State,1455,Wichita St,spellings_exact
+William & Mary,1456,William & Mary,spellings_exact
+Winthrop,1457,Winthrop,spellings_exact
+Wisconsin,1458,Wisconsin,spellings_exact
+Wofford,1459,Wofford,spellings_exact
+Wright State,1460,Wright St,spellings_exact
+Wyoming,1461,Wyoming,spellings_exact
+Xavier,1462,Xavier,spellings_exact
+Yale,1463,Yale,spellings_exact
+Youngstown State,1464,Youngstown St,spellings_exact
