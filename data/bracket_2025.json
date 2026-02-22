@@ -1,0 +1,58 @@
+{
+  "season": 2025,
+  "note": "Official 2025 NCAA Tournament bracket. First Four winners used for 11/16 seeds. Final Four: East vs West, South vs Midwest.",
+  "final_four_matchups": [
+    ["South", "West"],
+    ["Midwest", "East"]
+  ],
+  "regions": {
+    "South": {
+      "matchups": [
+        {"home": {"name": "Auburn",        "seed": 1}, "away": {"name": "Alabama State", "seed": 16}},
+        {"home": {"name": "Louisville",    "seed": 8}, "away": {"name": "Creighton",     "seed": 9}},
+        {"home": {"name": "Michigan",      "seed": 5}, "away": {"name": "UC San Diego",  "seed": 12}},
+        {"home": {"name": "Texas A&M",     "seed": 4}, "away": {"name": "Yale",          "seed": 13}},
+        {"home": {"name": "Michigan State","seed": 2}, "away": {"name": "Bryant",        "seed": 15}},
+        {"home": {"name": "Ole Miss",      "seed": 6}, "away": {"name": "North Carolina","seed": 11}},
+        {"home": {"name": "Iowa State",    "seed": 3}, "away": {"name": "Lipscomb",      "seed": 14}},
+        {"home": {"name": "Marquette",     "seed": 7}, "away": {"name": "New Mexico",    "seed": 10}}
+      ]
+    },
+    "West": {
+      "matchups": [
+        {"home": {"name": "Florida",       "seed": 1}, "away": {"name": "Norfolk State", "seed": 16}},
+        {"home": {"name": "UConn",         "seed": 8}, "away": {"name": "Oklahoma",      "seed": 9}},
+        {"home": {"name": "Memphis",       "seed": 5}, "away": {"name": "Colorado State","seed": 12}},
+        {"home": {"name": "Maryland",      "seed": 4}, "away": {"name": "Grand Canyon",  "seed": 13}},
+        {"home": {"name": "St. John's",    "seed": 2}, "away": {"name": "Omaha",         "seed": 15}},
+        {"home": {"name": "Missouri",      "seed": 6}, "away": {"name": "Drake",         "seed": 11}},
+        {"home": {"name": "Texas Tech",    "seed": 3}, "away": {"name": "UNC Wilmington","seed": 14}},
+        {"home": {"name": "Kansas",        "seed": 7}, "away": {"name": "Arkansas",      "seed": 10}}
+      ]
+    },
+    "East": {
+      "matchups": [
+        {"home": {"name": "Duke",          "seed": 1}, "away": {"name": "Mount St. Mary's","seed": 16}},
+        {"home": {"name": "Mississippi State","seed": 8}, "away": {"name": "Baylor",     "seed": 9}},
+        {"home": {"name": "Oregon",        "seed": 5}, "away": {"name": "Liberty",       "seed": 12}},
+        {"home": {"name": "Arizona",       "seed": 4}, "away": {"name": "Akron",         "seed": 13}},
+        {"home": {"name": "Alabama",       "seed": 2}, "away": {"name": "Robert Morris", "seed": 15}},
+        {"home": {"name": "BYU",           "seed": 6}, "away": {"name": "VCU",           "seed": 11}},
+        {"home": {"name": "Wisconsin",     "seed": 3}, "away": {"name": "Montana",       "seed": 14}},
+        {"home": {"name": "Saint Mary's",  "seed": 7}, "away": {"name": "Vanderbilt",    "seed": 10}}
+      ]
+    },
+    "Midwest": {
+      "matchups": [
+        {"home": {"name": "Houston",       "seed": 1}, "away": {"name": "SIU Edwardsville","seed": 16}},
+        {"home": {"name": "Gonzaga",       "seed": 8}, "away": {"name": "Georgia",       "seed": 9}},
+        {"home": {"name": "Clemson",       "seed": 5}, "away": {"name": "McNeese",       "seed": 12}},
+        {"home": {"name": "Purdue",        "seed": 4}, "away": {"name": "High Point",    "seed": 13}},
+        {"home": {"name": "Tennessee",     "seed": 2}, "away": {"name": "Wofford",       "seed": 15}},
+        {"home": {"name": "Illinois",      "seed": 6}, "away": {"name": "Xavier",        "seed": 11}},
+        {"home": {"name": "Kentucky",      "seed": 3}, "away": {"name": "Troy",          "seed": 14}},
+        {"home": {"name": "UCLA",          "seed": 7}, "away": {"name": "Utah State",    "seed": 10}}
+      ]
+    }
+  }
+}

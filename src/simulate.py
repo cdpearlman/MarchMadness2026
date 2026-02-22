@@ -591,25 +591,78 @@ def print_bracket(bracket: Bracket) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Bracket file loader (for when actual bracket is known)
+# Bracket file loader (hard-coded bracket input)
 # ---------------------------------------------------------------------------
 
 def load_bracket_file(path: str) -> dict:
     """
-    Load a bracket definition from JSON. Format:
+    Load a bracket definition from JSON.
+
+    Format: see data/bracket_YYYY.json for full example.
     {
       "season": 2026,
+      "final_four_matchups": [["South", "West"], ["Midwest", "East"]],
       "regions": {
-        "East":    [{"name": "Duke",    "seed": 1}, {"name": "Vermont", "seed": 16}, ...],
-        "West":    [...],
-        "South":   [...],
-        "Midwest": [...]
-      },
-      "final_four": [["East", "West"], ["South", "Midwest"]]
+        "East": {
+          "matchups": [
+            {"home": {"name": "Duke", "seed": 1}, "away": {"name": "Vermont", "seed": 16}},
+            ...  (8 matchups per region, in bracket order)
+          ]
+        },
+        ...
+      }
     }
     """
     with open(path) as f:
         return json.load(f)
+
+
+def build_region_matchups_from_file(
+    bracket: dict,
+    stats: pd.DataFrame,
+    season: int,
+) -> tuple[dict[str, list[tuple[Team, Team]]], list[tuple[str, str]], dict[str, Team]]:
+    """
+    Build region matchups from a hard-coded bracket JSON file.
+    Looks up each team's stats row by name for the given season.
+    """
+    # Build a lookup: normalized name -> stats row
+    season_stats = stats[stats[config.STATS_SEASON_COL] == season]
+    name_to_stats: dict[str, pd.Series] = {
+        row[config.STATS_TEAM_NAME_COL].lower(): row
+        for _, row in season_stats.iterrows()
+    }
+
+    def find_stats(name: str, seed: int) -> pd.Series:
+        # Try exact match first, then partial
+        key = name.lower()
+        if key in name_to_stats:
+            return name_to_stats[key]
+        for k, v in name_to_stats.items():
+            if key in k or k in key:
+                return v
+        # Fallback: empty series with seed info so sim can still run
+        print(f"  ⚠️  No stats found for '{name}' in {season} — using seed-only fallback")
+        return pd.Series({config.STATS_TEAM_NAME_COL: name, "SeedNum": seed})
+
+    region_matchups: dict[str, list[tuple[Team, Team]]] = {}
+    all_teams_by_name: dict[str, Team] = {}
+
+    for region_name, region_data in bracket["regions"].items():
+        matchup_list: list[tuple[Team, Team]] = []
+        for m in region_data["matchups"]:
+            h = m["home"]
+            a = m["away"]
+            team_h = Team(h["name"], h["seed"], region_name, find_stats(h["name"], h["seed"]))
+            team_a = Team(a["name"], a["seed"], region_name, find_stats(a["name"], a["seed"]))
+            matchup_list.append((team_h, team_a))
+            all_teams_by_name[h["name"]] = team_h
+            all_teams_by_name[a["name"]] = team_a
+        region_matchups[region_name] = matchup_list
+
+    final_four_matchups = [tuple(p) for p in bracket["final_four_matchups"]]
+
+    return region_matchups, final_four_matchups, all_teams_by_name
 
 
 # ---------------------------------------------------------------------------
@@ -686,8 +739,24 @@ def run(
     cache = MatchupCache(models, scaler, feature_cols)
 
     print(f"\nBuilding bracket structure for season {season}...")
-    region_matchups, final_four_matchups, all_teams_by_name = \
-        build_region_matchups_from_stats(stats, season)
+    if bracket_file:
+        print(f"  Loading bracket from: {bracket_file}")
+        bracket_data = load_bracket_file(bracket_file)
+        region_matchups, final_four_matchups, all_teams_by_name = \
+            build_region_matchups_from_file(bracket_data, stats, season)
+    else:
+        # Try default bracket file for this season
+        default_bracket = config.PROJECT_ROOT / "data" / f"bracket_{season}.json"
+        if default_bracket.exists():
+            print(f"  Loading bracket from: {default_bracket}")
+            bracket_data = load_bracket_file(str(default_bracket))
+            region_matchups, final_four_matchups, all_teams_by_name = \
+                build_region_matchups_from_file(bracket_data, stats, season)
+        else:
+            print(f"  ⚠️  No bracket file found for {season}. Using auto-seeding fallback.")
+            print(f"  To use hard-coded bracket: create data/bracket_{season}.json")
+            region_matchups, final_four_matchups, all_teams_by_name = \
+                build_region_matchups_from_stats(stats, season)
 
     total_teams = sum(len(v) * 2 for v in region_matchups.values())
     print(f"  Teams in bracket: {total_teams}")
@@ -767,12 +836,19 @@ def main():
     stats = load_team_stats()
     season = args.season or int(stats[config.STATS_SEASON_COL].max())
 
+    # Auto-detect bracket file if not specified
+    bracket_file = args.bracket_file
+    if not bracket_file:
+        default = config.PROJECT_ROOT / "data" / f"bracket_{season}.json"
+        if default.exists():
+            bracket_file = str(default)
+
     run(
         season=season,
         n_sims=args.n_sims,
         n_brackets=args.n_brackets,
         retrain=args.retrain,
-        bracket_file=args.bracket_file,
+        bracket_file=bracket_file,
     )
 
 
