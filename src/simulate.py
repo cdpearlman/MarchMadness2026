@@ -299,6 +299,152 @@ def pick_winner_by_ev(
     return team_a if ev_a >= ev_b else team_b
 
 
+def apply_temperature(p: float, temperature: float) -> float:
+    """
+    Soften or sharpen a win probability using temperature scaling.
+    temperature=0.0  → greedy (returns 1.0 if p>=0.5 else 0.0)
+    temperature=1.0  → pure probability (returns p unchanged)
+    temperature>1.0  → flatter than raw prob (more chaos)
+
+    Formula: p_adj = p^(1/T) / (p^(1/T) + (1-p)^(1/T))
+    """
+    if temperature <= 0.0:
+        return 1.0 if p >= 0.5 else 0.0
+    inv_t = 1.0 / temperature
+    pa = p ** inv_t
+    pb = (1.0 - p) ** inv_t
+    denom = pa + pb
+    return pa / denom if denom > 0 else 0.5
+
+
+def simulate_bracket_with_temperature(
+    region_matchups: dict[str, list[tuple[Team, Team]]],
+    final_four_matchups: list[tuple[str, str]],
+    cache: MatchupCache,
+    temperature: float,
+    rng: random.Random,
+    forced_round1_winners: Optional[dict[str, str]] = None,
+    upset_team_boost: float = 0.3,
+) -> Bracket:
+    """
+    Generate a bracket by simulating game-by-game in bracket order.
+    Each matchup's winner is sampled from a temperature-adjusted probability.
+
+    temperature=0.0 → always pick the favourite (greedy)
+    temperature=0.5 → moderate upset friendliness
+    temperature=1.0 → pure model probability
+    temperature=1.5 → heavy chaos
+
+    forced_round1_winners: dict mapping loser_name -> winner_name for
+    specific round-1 upsets to force (e.g. {"Memphis": "Colorado State"}).
+
+    upset_team_boost: when a forced upset team plays in later rounds, add this
+    to their win probability before temperature adjustment (capped at 0.95).
+    Ensures the Cinderella team has a real chance to keep advancing.
+    """
+    bracket = Bracket()
+    region_champions: dict[str, Team] = {}
+    forced = forced_round1_winners or {}
+    # Track which teams are "riding hot" (forced upset winners)
+    hot_teams: set[str] = set(forced.values())
+
+    for region, matchups in region_matchups.items():
+        current_round_pairs = list(matchups)
+
+        for round_num in range(1, 5):
+            round_winners: list[Team] = []
+
+            for team_a, team_b in current_round_pairs:
+                # Force round-1 upsets by key=loser, value=winner
+                if round_num == 1 and team_a.name in forced:
+                    winner_name = forced[team_a.name]
+                    winner = team_a if team_a.name == winner_name else team_b
+                elif round_num == 1 and team_b.name in forced:
+                    winner_name = forced[team_b.name]
+                    winner = team_b if team_b.name == winner_name else team_a
+                else:
+                    p_raw = cache.win_prob(team_a, team_b)
+                    # Boost a hot (upset) team's probability in later rounds
+                    if team_a.name in hot_teams:
+                        p_raw = min(p_raw + upset_team_boost, 0.95)
+                    elif team_b.name in hot_teams:
+                        p_raw = max(p_raw - upset_team_boost, 0.05)
+                    p_adj = apply_temperature(p_raw, temperature)
+                    winner = team_a if rng.random() < p_adj else team_b
+
+                round_winners.append(winner)
+                bracket.picks[round_num].append(winner.name)
+
+            next_pairs = []
+            for i in range(0, len(round_winners), 2):
+                if i + 1 < len(round_winners):
+                    next_pairs.append((round_winners[i], round_winners[i + 1]))
+            current_round_pairs = next_pairs
+
+        if round_winners:
+            region_champions[region] = round_winners[-1]
+
+    # Final Four (round 5)
+    final_four_teams: list[Team] = []
+    for region_a, region_b in final_four_matchups:
+        team_a = region_champions.get(region_a)
+        team_b = region_champions.get(region_b)
+        if team_a and team_b:
+            p_raw = cache.win_prob(team_a, team_b)
+            if team_a.name in hot_teams:
+                p_raw = min(p_raw + upset_team_boost, 0.95)
+            elif team_b.name in hot_teams:
+                p_raw = max(p_raw - upset_team_boost, 0.05)
+            p_adj = apply_temperature(p_raw, temperature)
+            winner = team_a if rng.random() < p_adj else team_b
+            final_four_teams.append(winner)
+            bracket.picks[5].append(winner.name)
+
+    # Championship (round 6)
+    if len(final_four_teams) == 2:
+        team_a, team_b = final_four_teams
+        p_raw = cache.win_prob(team_a, team_b)
+        if team_a.name in hot_teams:
+            p_raw = min(p_raw + upset_team_boost, 0.95)
+        elif team_b.name in hot_teams:
+            p_raw = max(p_raw - upset_team_boost, 0.05)
+        p_adj = apply_temperature(p_raw, temperature)
+        winner = team_a if rng.random() < p_adj else team_b
+        bracket.picks[6].append(winner.name)
+
+    return bracket
+
+
+def generate_sampled_bracket(
+    region_matchups: dict[str, list[tuple[Team, Team]]],
+    final_four_matchups: list[tuple[str, str]],
+    reach_probs: dict[str, dict[int, float]],
+    cache: MatchupCache,
+    temperature: float,
+    rng_seed: int,
+    forced_round1_winners: Optional[dict[str, str]] = None,
+    strategy_name: str = "",
+    notes: Optional[list[str]] = None,
+) -> Bracket:
+    """
+    Generate a bracket by sampling with temperature control.
+    Computes expected score after generation using reach_probs.
+    """
+    rng = random.Random(rng_seed)
+    bracket = simulate_bracket_with_temperature(
+        region_matchups, final_four_matchups, cache,
+        temperature, rng, forced_round1_winners
+    )
+    bracket.strategy_name = strategy_name
+    bracket.notes = notes or []
+    bracket.expected_score = sum(
+        expected_score_for_pick(team, r, reach_probs)
+        for r, teams in bracket.picks.items()
+        for team in teams
+    )
+    return bracket
+
+
 def generate_greedy_bracket(
     region_matchups: dict[str, list[tuple[Team, Team]]],
     final_four_matchups: list[tuple[str, str]],
@@ -421,6 +567,130 @@ def get_top_upset_candidates(
 
 
 # ---------------------------------------------------------------------------
+# Upset candidate detection
+# ---------------------------------------------------------------------------
+
+def get_upset_candidates_for_bracket(
+    reach_probs: dict[str, dict[int, float]],
+    all_teams_by_name: dict[str, Team],
+    min_seed: int = 5,
+    min_e8_prob: float = 0.05,
+    min_r32_prob: float = 0.25,
+) -> list[Team]:
+    """
+    Return high-seeded teams with meaningful deep-run probability.
+    Sorted by composite score: champ_prob + e8_prob * 0.3.
+    """
+    candidates = []
+    for name, probs in reach_probs.items():
+        team = all_teams_by_name.get(name)
+        if not team or team.seed < min_seed:
+            continue
+        e8_prob = probs.get(4, 0.0)
+        r32_prob = probs.get(2, 0.0)
+        champ_prob = probs.get(6, 0.0)
+        if e8_prob >= min_e8_prob or r32_prob >= min_r32_prob:
+            candidates.append((team, champ_prob, e8_prob, r32_prob))
+    candidates.sort(key=lambda x: x[1] + x[2] * 0.3 + x[3] * 0.1, reverse=True)
+    return [t for t, _, _, _ in candidates]
+
+
+def get_best_round1_upset(
+    region_matchups: dict[str, list[tuple[Team, Team]]],
+    cache: MatchupCache,
+    min_seed_gap: int = 4,
+) -> Optional[dict[str, str]]:
+    """
+    Find the single strongest first-round upset opportunity across all regions.
+    Returns forced_round1_winners dict: {loser_name: winner_name}.
+    min_seed_gap: only consider matchups where winner is at least this many
+    seeds higher (e.g. 12 beats 5 → gap of 7).
+    """
+    best = None
+    best_score = 0.0  # higher seed wins with meaningful probability
+
+    for region, matchups in region_matchups.items():
+        for team_a, team_b in matchups:
+            # team_a is always lower seed (home) in our bracket format
+            p_a_wins = cache.win_prob(team_a, team_b)
+            p_upset = 1.0 - p_a_wins  # prob higher seed (team_b) wins
+            seed_gap = team_b.seed - team_a.seed
+
+            if seed_gap >= min_seed_gap and p_upset >= 0.25:
+                # Score = upset probability weighted by seed gap (bigger upset = more valuable)
+                score = p_upset * (seed_gap / 10.0)
+                if score > best_score:
+                    best_score = score
+                    # Force team_b (the underdog) to win
+                    best = {team_a.name: team_b.name}
+
+    return best
+
+
+# ---------------------------------------------------------------------------
+# Bracket diversity metric
+# ---------------------------------------------------------------------------
+
+def compute_bracket_diversity(brackets: list[Bracket]) -> dict:
+    """
+    Compute pairwise pick overlap between all brackets.
+    overlap(A, B) = shared picks / total possible picks (63 games).
+    Returns matrix as dict and summary stats.
+    """
+    n = len(brackets)
+    overlaps = {}
+    all_overlaps = []
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            picks_i = set(
+                f"r{r}:{team}"
+                for r, teams in brackets[i].picks.items()
+                for team in teams
+            )
+            picks_j = set(
+                f"r{r}:{team}"
+                for r, teams in brackets[j].picks.items()
+                for team in teams
+            )
+            total = max(len(picks_i | picks_j), 1)
+            overlap = len(picks_i & picks_j) / total
+            overlaps[f"B{i+1}_vs_B{j+1}"] = round(overlap, 3)
+            all_overlaps.append(overlap)
+
+    return {
+        "pairwise": overlaps,
+        "mean_overlap": round(sum(all_overlaps) / len(all_overlaps), 3) if all_overlaps else 1.0,
+        "min_overlap": round(min(all_overlaps), 3) if all_overlaps else 1.0,
+    }
+
+
+def print_diversity_report(diversity: dict, brackets: list[Bracket]) -> None:
+    n = len(brackets)
+    print(f"\n  {'='*60}")
+    print(f"  BRACKET DIVERSITY REPORT")
+    print(f"  {'='*60}")
+    print(f"  Mean pairwise overlap: {diversity['mean_overlap']:.1%}")
+    print(f"  Min pairwise overlap:  {diversity['min_overlap']:.1%}")
+    if diversity['mean_overlap'] > 0.80:
+        print(f"  ⚠️  Brackets are very similar (>80% overlap). Consider raising temperature.")
+    print()
+    # Header
+    header = f"  {'':12}" + "".join(f"  B{j+1:>4}" for j in range(n))
+    print(header)
+    for i in range(n):
+        row = f"  B{i+1} {brackets[i].strategy_name[:10]:<10}"
+        for j in range(n):
+            if i == j:
+                row += f"  {'—':>5}"
+            else:
+                key = f"B{min(i,j)+1}_vs_B{max(i,j)+1}"
+                v = diversity['pairwise'].get(key, 0)
+                row += f"  {v:.0%}"
+        print(row)
+
+
+# ---------------------------------------------------------------------------
 # Main bracket generation
 # ---------------------------------------------------------------------------
 
@@ -432,121 +702,142 @@ def generate_all_brackets(
     cache: MatchupCache,
     n_brackets: int = 5,
 ) -> list[Bracket]:
-    """Generate n_brackets using different strategies."""
+    """
+    Generate n_brackets using a mix of strategies:
+      B1: Greedy EV (temperature=0) — chalk, highest floor
+      B2: Alt chalk (temperature=0, #2 champion) — second-most-likely winner
+      B3: Balanced sampling (temperature=0.5) — realistic, moderate variance
+      B4: Chaos (temperature=1.2) — high variance, heavy upset potential
+      B5: Coherent upset path — force top round-1 upset, sample rest at temp=0.6
+    """
     brackets = []
-
-    # --- Bracket 1: Pure greedy EV ---
-    b1 = generate_greedy_bracket(
-        region_matchups, final_four_matchups, reach_probs,
-        all_teams_by_name, cache
-    )
-    b1.strategy_name = "Greedy EV (chalk)"
-    b1.notes = ["Maximizes expected score at every matchup", "Best single bracket"]
-    brackets.append(b1)
-
-    if n_brackets < 2:
-        return brackets
-
-    # Find the top champion candidate (by championship probability)
-    champ_probs = [(name, probs.get(6, 0.0)) for name, probs in reach_probs.items()]
-    champ_probs.sort(key=lambda x: x[1], reverse=True)
-    top_champs = [name for name, _ in champ_probs[:6]]
-
-    # --- Bracket 2: Same as #1 but swap champion to #2 most likely ---
-    if len(top_champs) >= 2 and top_champs[1] != b1.picks[6][0] if b1.picks[6] else True:
-        alt_champ = top_champs[1] if top_champs[0] == (b1.picks[6][0] if b1.picks[6] else "") else top_champs[0]
-        b2 = generate_greedy_bracket(
-            region_matchups, final_four_matchups, reach_probs,
-            all_teams_by_name, cache,
-            forced_champion=alt_champ
-        )
-        b2.strategy_name = f"Alt Champion: {alt_champ}"
-        b2.notes = [f"Same structure as greedy, champion swapped to {alt_champ}",
-                    f"Champion probability: {reach_probs.get(alt_champ, {}).get(6, 0):.1%}"]
-        brackets.append(b2)
-    else:
-        brackets.append(deepcopy(b1))
-
-    if n_brackets < 3:
-        return brackets
-
-    # --- Bracket 3: Upset special — follow top upset candidate deep ---
     upset_candidates = get_upset_candidates_for_bracket(reach_probs, all_teams_by_name)
-    if upset_candidates:
-        top_upset = upset_candidates[0]
-        b3 = generate_greedy_bracket(
-            region_matchups, final_four_matchups, reach_probs,
-            all_teams_by_name, cache,
-            forced_final_four=[top_upset.name],
-            forced_champion=top_upset.name
-        )
-        b3.strategy_name = f"Upset Special: {top_upset.name} (#{top_upset.seed})"
-        b3.notes = [
-            f"Built around {top_upset.name} (#{top_upset.seed} seed) making a deep run",
-            f"Elite Eight probability: {reach_probs.get(top_upset.name, {}).get(4, 0):.1%}",
-            f"Championship probability: {reach_probs.get(top_upset.name, {}).get(6, 0):.1%}",
-        ]
-        brackets.append(b3)
-    else:
-        brackets.append(deepcopy(b1))
+    champ_probs_sorted = sorted(reach_probs.items(), key=lambda x: x[1].get(6, 0), reverse=True)
+    top_champs = [name for name, _ in champ_probs_sorted]
 
-    if n_brackets < 4:
-        return brackets
+    # --- Bracket 1: Pure greedy (temperature=0) ---
+    b1 = generate_sampled_bracket(
+        region_matchups, final_four_matchups, reach_probs, cache,
+        temperature=0.0, rng_seed=42,
+        strategy_name="Greedy EV (chalk)",
+        notes=["temperature=0: always picks the favourite",
+               "Highest floor, lowest variance"]
+    )
+    brackets.append(b1)
+    if n_brackets < 2:
+        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
 
-    # --- Bracket 4: Second upset candidate or alt Final Four ---
-    if len(upset_candidates) >= 2:
-        upset2 = upset_candidates[1]
-        b4 = generate_greedy_bracket(
-            region_matchups, final_four_matchups, reach_probs,
-            all_teams_by_name, cache,
-            forced_final_four=[upset2.name]
-        )
-        b4.strategy_name = f"Upset Run: {upset2.name} (#{upset2.seed}) to Final Four"
-        b4.notes = [
-            f"{upset2.name} (#{upset2.seed}) goes deep but doesn't win it all",
-            f"Final Four probability: {reach_probs.get(upset2.name, {}).get(5, 0):.1%}",
-        ]
-        brackets.append(b4)
-    else:
-        brackets.append(deepcopy(b1))
-
-    if n_brackets < 5:
-        return brackets
-
-    # --- Bracket 5: Max divergence — pick #3 champion, second upset candidate ---
-    alt_champ2 = top_champs[2] if len(top_champs) >= 3 else (top_champs[-1] if top_champs else None)
-    b5 = generate_greedy_bracket(
+    # --- Bracket 2: Alt chalk — force #2 champion, greedy everywhere else ---
+    greedy_champ = b1.picks[6][0] if b1.picks[6] else ""
+    alt_champ = next((n for n in top_champs if n != greedy_champ), greedy_champ)
+    b2 = generate_greedy_bracket(
         region_matchups, final_four_matchups, reach_probs,
         all_teams_by_name, cache,
-        forced_champion=alt_champ2,
-        forced_final_four=[upset_candidates[1].name] if len(upset_candidates) >= 2 else None
+        forced_champion=alt_champ
     )
-    b5.strategy_name = f"Wildcard: {alt_champ2} wins, upset run included"
-    b5.notes = [
-        "Most divergent from bracket #1",
-        f"Champion: {alt_champ2} ({reach_probs.get(alt_champ2, {}).get(6, 0):.1%} probability)" if alt_champ2 else "",
+    b2.strategy_name = f"Alt Chalk: {alt_champ} wins"
+    b2.notes = [
+        f"Greedy everywhere, champion forced to {alt_champ}",
+        f"Championship probability: {reach_probs.get(alt_champ, {}).get(6, 0):.1%}",
     ]
+    brackets.append(b2)
+    if n_brackets < 3:
+        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
+
+    # --- Bracket 3: Balanced sampling (temperature=0.5) ---
+    b3 = generate_sampled_bracket(
+        region_matchups, final_four_matchups, reach_probs, cache,
+        temperature=0.5, rng_seed=137,
+        strategy_name="Balanced (temp=0.5)",
+        notes=["temperature=0.5: respects model signal but allows upsets",
+               "Good balance of floor and variance"]
+    )
+    brackets.append(b3)
+    if n_brackets < 4:
+        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
+
+    # --- Bracket 4: Chaos (temperature=1.2) ---
+    b4 = generate_sampled_bracket(
+        region_matchups, final_four_matchups, reach_probs, cache,
+        temperature=1.2, rng_seed=999,
+        strategy_name="Chaos (temp=1.2)",
+        notes=["temperature=1.2: probabilities flattened toward 50/50",
+               "Highest variance — captures low-probability deep runs"]
+    )
+    brackets.append(b4)
+    if n_brackets < 5:
+        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
+
+    # --- Bracket 5: Coherent upset path ---
+    # Find the best first-round upset and force it, then sample the rest
+    forced_upset = get_best_round1_upset(region_matchups, cache)
+    if forced_upset:
+        winner_name = list(forced_upset.values())[0]
+        loser_name  = list(forced_upset.keys())[0]
+        upset_team  = all_teams_by_name.get(winner_name)
+        upset_seed  = upset_team.seed if upset_team else "?"
+
+        # Find a seed where the upset team advances at least to R2
+        # Try seeds until we find one where the Cinderella makes the Sweet 16
+        # (or fall back after 50 attempts)
+        best_seed = 777
+        best_rounds = 1
+        for trial_seed in range(777, 777 + 200, 7):
+            rng_trial = random.Random(trial_seed)
+            trial = simulate_bracket_with_temperature(
+                region_matchups, final_four_matchups, cache,
+                temperature=0.6, rng=rng_trial,
+                forced_round1_winners=forced_upset,
+                upset_team_boost=0.3,
+            )
+            rounds_advanced = max(
+                (int(r) for r, teams in trial.picks.items() if winner_name in teams),
+                default=0
+            )
+            if rounds_advanced > best_rounds:
+                best_rounds = rounds_advanced
+                best_seed = trial_seed
+            if rounds_advanced >= 3:  # Sweet 16 or beyond — good enough
+                break
+
+        b5 = generate_sampled_bracket(
+            region_matchups, final_four_matchups, reach_probs, cache,
+            temperature=0.6, rng_seed=best_seed,
+            forced_round1_winners=forced_upset,
+            strategy_name=f"Upset Path: #{upset_seed} {winner_name}",
+            notes=[
+                f"Forces {winner_name} (#{upset_seed}) over {loser_name} in round 1",
+                f"Upset team boosted in subsequent rounds (upset_boost=+0.3)",
+                f"Advances to round {best_rounds} in this bracket",
+            ]
+        )
+    else:
+        # Fallback: no strong upset found, use high temp
+        b5 = generate_sampled_bracket(
+            region_matchups, final_four_matchups, reach_probs, cache,
+            temperature=1.5, rng_seed=777,
+            strategy_name="High Variance (temp=1.5)",
+            notes=["No strong upset opportunity found", "High variance fallback"]
+        )
     brackets.append(b5)
 
+    return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
+
+
+def _finalize(
+    brackets: list[Bracket],
+    region_matchups, final_four_matchups, reach_probs, cache
+) -> list[Bracket]:
+    """Compute diversity and attach to brackets list."""
+    # Recompute expected scores (already done, but verify)
+    for b in brackets:
+        if b.expected_score == 0.0:
+            b.expected_score = sum(
+                expected_score_for_pick(team, r, reach_probs)
+                for r, teams in b.picks.items()
+                for team in teams
+            )
     return brackets
-
-
-def get_upset_candidates_for_bracket(
-    reach_probs: dict[str, dict[int, float]],
-    all_teams_by_name: dict[str, Team],
-) -> list[Team]:
-    """Return teams with seed >= 5 that have meaningful championship upside."""
-    candidates = []
-    for name, probs in reach_probs.items():
-        team = all_teams_by_name.get(name)
-        if team and team.seed >= 5:
-            champ_prob = probs.get(6, 0.0)
-            e8_prob = probs.get(4, 0.0)
-            # Must have real upside: E8 > 8% or championship > 2%
-            if e8_prob > 0.08 or champ_prob > 0.02:
-                candidates.append((team, champ_prob, e8_prob))
-    candidates.sort(key=lambda x: x[1] + x[2] * 0.3, reverse=True)
-    return [t for t, _, _ in candidates]
 
 
 # ---------------------------------------------------------------------------
@@ -784,6 +1075,9 @@ def run(
         print(f"\n  --- Bracket {i} ---")
         print_bracket(bracket)
 
+    diversity = compute_bracket_diversity(brackets)
+    print_diversity_report(diversity, brackets)
+
     # Save outputs
     if output_dir is None:
         output_dir = config.PROCESSED_DIR
@@ -805,8 +1099,13 @@ def run(
     probs_df.to_csv(probs_path, index=False)
     print(f"\n  Saved reach probabilities → {probs_path}")
 
-    # Save brackets as JSON
-    brackets_data = [b.to_dict() for b in brackets]
+    # Save brackets as JSON (include diversity report)
+    brackets_data = {
+        "season": season,
+        "n_sims": n_sims,
+        "diversity": diversity,
+        "brackets": [b.to_dict() for b in brackets],
+    }
     brackets_path = output_dir / f"brackets_{season}.json"
     with open(brackets_path, "w") as f:
         json.dump(brackets_data, f, indent=2)
