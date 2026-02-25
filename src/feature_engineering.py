@@ -29,7 +29,7 @@ def compute_differentials(df: pd.DataFrame) -> pd.DataFrame:
       - Season, Label
       - diff_<feature> columns
     """
-    feature_cols = [c for c in config.FEATURES if f"A_{c}" in df.columns] + ["SeedNum"]
+    feature_cols = [c for c in config.FEATURES if f"A_{c}" in df.columns]
 
     result = df[["Season", "Label"]].copy()
 
