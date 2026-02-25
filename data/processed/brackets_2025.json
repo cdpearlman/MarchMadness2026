@@ -3,27 +3,26 @@
   "n_sims": 10000,
   "diversity": {
     "pairwise": {
-      "B1_vs_B2": 0.909,
-      "B1_vs_B3": 0.8,
-      "B1_vs_B4": 0.595,
-      "B1_vs_B5": 0.726,
-      "B2_vs_B3": 0.726,
-      "B2_vs_B4": 0.575,
-      "B2_vs_B5": 0.703,
-      "B3_vs_B4": 0.615,
-      "B3_vs_B5": 0.658,
-      "B4_vs_B5": 0.556
+      "B1_vs_B2": 0.938,
+      "B1_vs_B3": 0.881,
+      "B1_vs_B4": 0.938,
+      "B1_vs_B5": 0.881,
+      "B2_vs_B3": 0.826,
+      "B2_vs_B4": 0.881,
+      "B2_vs_B5": 0.826,
+      "B3_vs_B4": 0.826,
+      "B3_vs_B5": 0.775,
+      "B4_vs_B5": 0.826
     },
-    "mean_overlap": 0.686,
-    "min_overlap": 0.556
+    "mean_overlap": 0.86,
+    "min_overlap": 0.775
   },
   "brackets": [
     {
-      "strategy": "Greedy EV (chalk)",
-      "expected_score": 125.03,
+      "strategy": "Analytical B1",
+      "expected_score": 73.01,
       "notes": [
-        "temperature=0: always picks the favourite",
-        "Highest floor, lowest variance"
+        "Forced F4: Auburn, Florida, Duke, Houston"
       ],
       "picks": {
         "1": [
@@ -70,23 +69,23 @@
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Arizona",
+          "Oregon",
           "Alabama",
           "Wisconsin",
           "Houston",
           "Purdue",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
           "Auburn",
           "Michigan State",
           "Florida",
-          "Texas Tech",
+          "St. John's",
           "Duke",
           "Alabama",
           "Houston",
-          "UCLA"
+          "Tennessee"
         ],
         "4": [
           "Auburn",
@@ -95,20 +94,19 @@
           "Houston"
         ],
         "5": [
-          "Florida",
-          "Duke"
+          "Auburn",
+          "Houston"
         ],
         "6": [
-          "Duke"
+          "Auburn"
         ]
       }
     },
     {
-      "strategy": "Alt Chalk: Houston wins",
-      "expected_score": 118.1,
+      "strategy": "Analytical B2",
+      "expected_score": 67.69,
       "notes": [
-        "Greedy everywhere, champion forced to Houston",
-        "Championship probability: 28.3%"
+        "Forced F4: Auburn, Maryland, Duke, Houston"
       ],
       "picks": {
         "1": [
@@ -155,19 +153,19 @@
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Arizona",
+          "Oregon",
           "Alabama",
           "Wisconsin",
           "Houston",
           "Purdue",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
           "Auburn",
           "Michigan State",
-          "Florida",
-          "Texas Tech",
+          "Maryland",
+          "St. John's",
           "Duke",
           "Alabama",
           "Houston",
@@ -175,42 +173,41 @@
         ],
         "4": [
           "Auburn",
-          "Florida",
+          "Maryland",
           "Duke",
           "Houston"
         ],
         "5": [
-          "Florida",
+          "Auburn",
           "Houston"
         ],
         "6": [
-          "Houston"
+          "Auburn"
         ]
       }
     },
     {
-      "strategy": "Balanced (temp=0.5)",
-      "expected_score": 121.54,
+      "strategy": "Analytical B3",
+      "expected_score": 68.61,
       "notes": [
-        "temperature=0.5: respects model signal but allows upsets",
-        "Good balance of floor and variance"
+        "Forced F4: Michigan, Florida, Duke, Houston"
       ],
       "picks": {
         "1": [
           "Auburn",
           "Creighton",
-          "UC San Diego",
+          "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
           "New Mexico",
           "Florida",
-          "Oklahoma",
-          "Memphis",
+          "UConn",
+          "Colorado State",
           "Maryland",
           "St. John's",
-          "Drake",
+          "Missouri",
           "Texas Tech",
           "Arkansas",
           "Duke",
@@ -232,7 +229,7 @@
         ],
         "2": [
           "Auburn",
-          "Texas A&M",
+          "Michigan",
           "Michigan State",
           "Iowa State",
           "Florida",
@@ -240,64 +237,63 @@
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Arizona",
+          "Oregon",
           "Alabama",
           "Wisconsin",
           "Houston",
           "Purdue",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
-          "Auburn",
+          "Michigan",
           "Michigan State",
           "Florida",
-          "Texas Tech",
+          "St. John's",
           "Duke",
-          "Wisconsin",
+          "Alabama",
           "Houston",
-          "UCLA"
+          "Tennessee"
         ],
         "4": [
-          "Auburn",
+          "Michigan",
           "Florida",
           "Duke",
           "Houston"
         ],
         "5": [
-          "Auburn",
-          "Duke"
+          "Michigan",
+          "Houston"
         ],
         "6": [
-          "Duke"
+          "Michigan"
         ]
       }
     },
     {
-      "strategy": "Chaos (temp=1.2)",
-      "expected_score": 106.22,
+      "strategy": "Analytical B4",
+      "expected_score": 69.59,
       "notes": [
-        "temperature=1.2: probabilities flattened toward 50/50",
-        "Highest variance \u2014 captures low-probability deep runs"
+        "Forced F4: Auburn, Florida, Oregon, Houston"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Louisville",
-          "UC San Diego",
+          "Creighton",
+          "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "Marquette",
+          "New Mexico",
           "Florida",
           "UConn",
           "Colorado State",
           "Maryland",
           "St. John's",
-          "Drake",
+          "Missouri",
           "Texas Tech",
-          "Kansas",
+          "Arkansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -308,18 +304,18 @@
           "Saint Mary's",
           "Houston",
           "Gonzaga",
-          "McNeese",
+          "Clemson",
           "Purdue",
           "Tennessee",
-          "Xavier",
+          "Illinois",
           "Kentucky",
           "UCLA"
         ],
         "2": [
           "Auburn",
-          "Texas A&M",
+          "Michigan",
           "Michigan State",
-          "Marquette",
+          "Iowa State",
           "Florida",
           "Maryland",
           "St. John's",
@@ -327,44 +323,42 @@
           "Duke",
           "Oregon",
           "Alabama",
-          "Saint Mary's",
+          "Wisconsin",
           "Houston",
           "Purdue",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
           "Auburn",
           "Michigan State",
           "Florida",
           "St. John's",
-          "Duke",
-          "Saint Mary's",
+          "Oregon",
+          "Alabama",
           "Houston",
           "Tennessee"
         ],
         "4": [
           "Auburn",
-          "St. John's",
-          "Duke",
+          "Florida",
+          "Oregon",
           "Houston"
         ],
         "5": [
-          "St. John's",
-          "Duke"
+          "Auburn",
+          "Houston"
         ],
         "6": [
-          "Duke"
+          "Auburn"
         ]
       }
     },
     {
-      "strategy": "Upset Path: #12 Colorado State",
-      "expected_score": 113.86,
+      "strategy": "Analytical B5",
+      "expected_score": 68.26,
       "notes": [
-        "Forces Colorado State (#12) over Memphis in round 1",
-        "Upset team boosted in subsequent rounds (upset_boost=+0.3)",
-        "Advances to round 3 in this bracket"
+        "Forced F4: Auburn, Florida, Duke, Gonzaga"
       ],
       "picks": {
         "1": [
@@ -373,11 +367,11 @@
           "Michigan",
           "Texas A&M",
           "Michigan State",
-          "North Carolina",
+          "Ole Miss",
           "Iowa State",
           "New Mexico",
           "Florida",
-          "Oklahoma",
+          "UConn",
           "Colorado State",
           "Maryland",
           "St. John's",
@@ -385,7 +379,7 @@
           "Texas Tech",
           "Arkansas",
           "Duke",
-          "Mississippi State",
+          "Baylor",
           "Oregon",
           "Arizona",
           "Alabama",
@@ -394,10 +388,10 @@
           "Saint Mary's",
           "Houston",
           "Gonzaga",
-          "McNeese",
+          "Clemson",
           "Purdue",
           "Tennessee",
-          "Xavier",
+          "Illinois",
           "Kentucky",
           "UCLA"
         ],
@@ -407,40 +401,40 @@
           "Michigan State",
           "Iowa State",
           "Florida",
-          "Colorado State",
+          "Maryland",
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Arizona",
+          "Oregon",
           "Alabama",
           "Wisconsin",
-          "Houston",
+          "Gonzaga",
           "Purdue",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
           "Auburn",
           "Michigan State",
-          "Colorado State",
-          "Texas Tech",
+          "Florida",
+          "St. John's",
           "Duke",
           "Alabama",
-          "Houston",
+          "Gonzaga",
           "Tennessee"
         ],
         "4": [
           "Auburn",
-          "Texas Tech",
+          "Florida",
           "Duke",
-          "Houston"
+          "Gonzaga"
         ],
         "5": [
           "Auburn",
-          "Duke"
+          "Gonzaga"
         ],
         "6": [
-          "Duke"
+          "Auburn"
         ]
       }
     }

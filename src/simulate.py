@@ -1009,6 +1009,7 @@ def run(
     retrain: bool = False,
     bracket_file: Optional[str] = None,
     output_dir: Optional[Path] = None,
+    no_sim: bool = False,
 ) -> list[Bracket]:
     """Full pipeline: load models → build bracket → simulate → generate brackets."""
 
@@ -1054,19 +1055,32 @@ def run(
     for region, matchups in region_matchups.items():
         print(f"  {region}: {len(matchups)} first-round games")
 
-    print(f"\nRunning Monte Carlo simulation ({n_sims:,} iterations)...")
-    reach_probs = run_monte_carlo(
-        region_matchups, final_four_matchups, cache, n_sims=n_sims
+    from bracket_engine import run_analytical
+    print(f"\nRunning Analytical Bracket generation...")
+    brackets, analysis_report = run_analytical(
+        season, region_matchups, final_four_matchups, all_teams_by_name, cache,
+        n_brackets=n_brackets
     )
 
-    print(f"\nTop teams by championship probability:")
-    print_reach_probs(reach_probs, all_teams_by_name)
+    print(f"\n{'='*75}")
+    print(f"  UPSET PREMIUM REPORT")
+    print(f"{'='*75}")
+    for upr in analysis_report['upset_premiums'][:10]:
+        if upr['upset_premium'] > 0:
+            print(f"  +{upr['upset_premium']:>4.1f} pts : #{upr['seed']:<2} {upr['team'].name:<20} | {upr['road_description']}")
 
-    print(f"\nGenerating {n_brackets} optimized brackets...")
-    brackets = generate_all_brackets(
-        region_matchups, final_four_matchups, reach_probs,
-        all_teams_by_name, cache, n_brackets=n_brackets
-    )
+    reach_probs = analysis_report['path_probs']
+
+    if not no_sim:
+        print(f"\nRunning Monte Carlo simulation ({n_sims:,} iterations) for validation reporting...")
+        mc_reach_probs = run_monte_carlo(
+            region_matchups, final_four_matchups, cache, n_sims=n_sims
+        )
+        print(f"\nTop teams by championship probability (Monte Carlo):")
+        print_reach_probs(mc_reach_probs, all_teams_by_name)
+    else:
+        print(f"\nTop teams by championship probability (Analytical):")
+        print_reach_probs(reach_probs, all_teams_by_name)
 
     print(f"\n{'='*60}")
     print(f"  BRACKET RECOMMENDATIONS")
@@ -1130,6 +1144,8 @@ def main():
                         help="Force model retraining")
     parser.add_argument("--bracket-file", type=str, default=None,
                         help="Path to bracket JSON file (for actual bracket input)")
+    parser.add_argument("--no-sim", action="store_true",
+                        help="Skip Monte Carlo simulation and run pure analytical backend")
     args = parser.parse_args()
 
     stats = load_team_stats()
@@ -1148,6 +1164,7 @@ def main():
         n_brackets=args.n_brackets,
         retrain=args.retrain,
         bracket_file=bracket_file,
+        no_sim=args.no_sim,
     )
 
 
