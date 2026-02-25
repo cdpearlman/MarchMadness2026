@@ -46,6 +46,20 @@ def build_region_tree(matchups: list[tuple['Team', 'Team']], region_name: str) -
     return current_nodes[0]
 
 
+def collect_pod_nodes(region_tree: BracketNode) -> list[BracketNode]:
+    """Return all round-2 nodes in left-to-right tree order."""
+    pods = []
+    def walk(node):
+        if node.round_num == 2:
+            pods.append(node)
+            return
+        if node.left: walk(node.left)
+        if node.right: walk(node.right)
+    walk(region_tree)
+    return pods
+
+
+
 def build_full_tree(region_matchups: dict[str, list[tuple['Team', 'Team']]], final_four_matchups: list[tuple[str, str]]) -> tuple[BracketNode, dict[str, BracketNode]]:
     trees = {}
     for region, matchups in region_matchups.items():
@@ -170,7 +184,49 @@ def enumerate_final_four_combos(
     return combos, combo_probs
 
 
+def enumerate_pod_combos(
+    region_trees: dict[str, BracketNode],
+    global_probs: dict[str, dict[int, float]],
+    top_k_per_pod: int = 2,
+    min_joint_prob: float = 0.0,
+) -> tuple[list[dict[str, str]], list[float]]:
+    pod_top_teams = {}
+    pod_ids = []
+    
+    # 1. Collect and sort all pods
+    for region, tree in region_trees.items():
+        pods = collect_pod_nodes(tree)
+        for i, pod_node in enumerate(pods):
+            pod_id = f"{region}_{i}"
+            pod_ids.append(pod_id)
+            
+            # get probs of winning this pod (reaching round 3)
+            team_probs = {t.name: global_probs[t.name][3] for t in pod_node.teams}
+            sorted_teams = sorted(team_probs.items(), key=lambda x: x[1], reverse=True)
+            pod_top_teams[pod_id] = sorted_teams[:top_k_per_pod]
+            
+    pools = [pod_top_teams[pid] for pid in pod_ids]
+    
+    combos = []
+    combo_probs = []
+    
+    # 2. Iterate product
+    for combo_tuple in itertools.product(*pools):
+        joint_p = 1.0
+        combo_dict = {}
+        for i, (t, p) in enumerate(combo_tuple):
+            joint_p *= p
+            combo_dict[pod_ids[i]] = t
+            
+        if joint_p >= min_joint_prob:
+            combos.append(combo_dict)
+            combo_probs.append(joint_p)
+            
+    return combos, combo_probs
+
+
 def select_diverse_combos(combos: list[dict[str, str]], combo_probs: list[float], n: int, diversity_weight: float = 0.5) -> list[dict[str, str]]:
+    import math
     if not combos: return []
     
     best_idx = max(range(len(combo_probs)), key=lambda i: combo_probs[i])
@@ -182,19 +238,23 @@ def select_diverse_combos(combos: list[dict[str, str]], combo_probs: list[float]
     def dist(c1, c2):
         return sum(1 for r in c1 if c1[r] != c2[r])
         
+    log_probs = [math.log(p) if p > 1e-100 else -1000.0 for p in combo_probs]
+    
     while len(selected) < n and remaining_idxs:
         best_score = -1.0
         best_i = None
         
-        max_p = max(combo_probs[i] for i in remaining_idxs) if remaining_idxs else 1.0
-        if max_p == 0: max_p = 1.0 
+        current_rem = list(remaining_idxs)
+        max_lp = max(log_probs[i] for i in current_rem)
+        min_lp = min(log_probs[i] for i in current_rem)
+        lp_range = max_lp - min_lp if max_lp > min_lp else 1.0
         
-        for i in remaining_idxs:
-            p_score = combo_probs[i] / max_p
+        for i in current_rem:
+            p_score = (log_probs[i] - min_lp) / lp_range
             avg_d = sum(dist(combos[i], s) for s in selected) / len(selected)
-            d_score = avg_d / 4.0 
+            d_score = avg_d / len(combos[i]) 
             
-            score = (1.0 - diversity_weight) * p_score + diversity_weight * d_score
+            score = (1 - diversity_weight) * p_score + diversity_weight * d_score
             if score > best_score:
                 best_score = score
                 best_i = i
@@ -205,28 +265,90 @@ def select_diverse_combos(combos: list[dict[str, str]], combo_probs: list[float]
     return selected
 
 
-def evaluate_combo_and_build(combo: dict[str, str], trees: dict[str, BracketNode], root: BracketNode, global_probs: dict[str, dict[int, float]], region_matchups: dict) -> 'Bracket':
+def evaluate_pod_combo_and_build(
+    combo: dict[str, str],           # pod_id -> team_name
+    pod_nodes: dict[str, BracketNode],  # pod_id -> round-2 node
+    region_trees: dict[str, BracketNode],  # region -> root node
+    root: BracketNode,
+    global_probs: dict[str, dict[int, float]],
+    region_matchups: dict,
+    final_four_matchups: list[tuple[str, str]],
+    all_teams_by_name: dict[str, 'Team'],
+) -> 'Bracket':
     import simulate
     bracket = simulate.Bracket()
     
+    # 1. Force round 1 & 2 picks by tracing downward from each round-2 pod node
+    picks_by_round = {r: [] for r in range(1, 7)}
+    for region in region_trees.keys():
+        for i in range(4):
+            pod_id = f"{region}_{i}"
+            forced_winner = combo[pod_id]
+            pod_node = pod_nodes[pod_id]
+            
+            # create a temporary structure to hold the traced picks for this pod
+            pod_picks = {r: [None]*(2**(4-r)) for r in range(1, 4)} 
+            trace_picks(pod_node, forced_winner, pod_picks)
+            
+            for r in range(1, 3):
+                picks_by_round[r].extend([p for p in pod_picks[r] if p is not None])
+
+    # 2. Greedy EV pass upward for rounds 3, 4, 5, 6
+    # Round 3: pod 0 winner vs pod 1 winner (left half), pod 2 inner vs pod 3 winner (right half)
+    r3_winners = {} # region -> [left_s16_winner, right_s16_winner]
+    r4_nodes = [] # [{'teams': [left_champ, right_champ], ...}]
+
+    for region in region_trees.keys():
+        t0 = combo[f"{region}_{0}"]
+        t1 = combo[f"{region}_{1}"]
+        t2 = combo[f"{region}_{2}"]
+        t3 = combo[f"{region}_{3}"]
+
+        ev_0 = global_probs[t0][3] * ROUND_POINTS[3]
+        ev_1 = global_probs[t1][3] * ROUND_POINTS[3]
+        best_left = t0 if ev_0 >= ev_1 else t1
+        
+        ev_2 = global_probs[t2][3] * ROUND_POINTS[3]
+        ev_3 = global_probs[t3][3] * ROUND_POINTS[3]
+        best_right = t2 if ev_2 >= ev_3 else t3
+        
+        picks_by_round[3].extend([best_left, best_right])
+        r3_winners[region] = [best_left, best_right]
+        
+        # Round 4 (regional final)
+        ev_left = global_probs[best_left][4] * ROUND_POINTS[4] 
+        ev_right = global_probs[best_right][4] * ROUND_POINTS[4]
+        best_r4 = best_left if ev_left >= ev_right else best_right
+        
+        picks_by_round[4].append(best_r4)
+        
+        # We need r4_nodes to be parallel to how the original evaluate_combo_and_build passed them to the F4
+        r4_nodes.append({'region': region, 'best': best_r4, 'teams': [best_left, best_right], 'scores': {best_left: ev_left, best_right: ev_right}, 'best_score': max(ev_left, ev_right)})
+
+
     r5_nodes = []
-    for f4_node in [root.left, root.right]:
-        left_region = f4_node.left.region_name
-        right_region = f4_node.right.region_name
+    # match region 0 with region 1, and region 2 with region 3
+    # root.left.left.region_name is final_four_matchups[0][0]
+    for i, (left_region, right_region) in enumerate(final_four_matchups):
+        left_node = next(n for n in r4_nodes if n['region'] == left_region)
+        right_node = next(n for n in r4_nodes if n['region'] == right_region)
+
+        t_left = left_node['best']
+        t_right = right_node['best']
         
-        t_left = combo[left_region]
-        t_right = combo[right_region]
-        
-        score_left = f4_node.left.score[t_left]
-        score_right = f4_node.right.score[t_right]
+        # approximate the exact DP score from before by using global_probs[t][5] + node scores
+        score_left = left_node['scores'][t_left] if t_left in left_node['scores'] else left_node['best_score']
+        score_right = right_node['scores'][t_right] if t_right in right_node['scores'] else right_node['best_score']
         
         s_tleft = global_probs[t_left][5] * 16 + score_left + score_right
         s_tright = global_probs[t_right][5] * 16 + score_right + score_left
         
         best_r5_score = max(s_tleft, s_tright)
         best_r5_team = t_left if s_tleft >= s_tright else t_right
+        picks_by_round[5].append(best_r5_team)
+
         r5_nodes.append({'teams': [t_left, t_right], 'scores': {t_left: s_tleft, t_right: s_tright}, 'best': best_r5_team, 'best_score': best_r5_score})
-        
+
     left_r5 = r5_nodes[0]
     right_r5 = r5_nodes[1]
     
@@ -245,29 +367,11 @@ def evaluate_combo_and_build(combo: dict[str, str], trees: dict[str, BracketNode
             best_r6_score = s
             best_r6_team = t
 
-    picks_by_round = {r: [] for r in range(1, 7)}
     picks_by_round[6].append(best_r6_team)
-    
-    if best_r6_team in r5_nodes[0]['teams']:
-        t_f4_1 = best_r6_team
-        t_f4_2 = r5_nodes[1]['best']
-    else:
-        t_f4_1 = r5_nodes[0]['best']
-        t_f4_2 = best_r6_team
-        
-    picks_by_round[5].append(t_f4_1)
-    picks_by_round[5].append(t_f4_2)
-    
-    for region in region_matchups.keys():
-        tree = trees[region]
-        forced_winner = combo[region]
-        region_picks = {r: [None]*(2**(4-r)) for r in range(1, 5)}
-        trace_picks(tree, forced_winner, region_picks)
-        for r in range(1, 5):
-            picks_by_round[r].extend(region_picks[r])
             
+    expected_score = sum(global_probs[t][r] * ROUND_POINTS[r] for r, teams in picks_by_round.items() for t in teams)
     bracket.picks = picks_by_round
-    bracket.expected_score = best_r6_score
+    bracket.expected_score = expected_score
     return bracket
 
 
@@ -317,28 +421,37 @@ def run_analytical(
     all_teams_by_name: dict[str, 'Team'],
     cache: 'MatchupCache',
     n_brackets: int = 5,
-    top_k_per_region: int = 4,
-    diversity_weight: float = 0.5,
+    top_k_per_pod: int = 2,
+    diversity_weight: float = 0.7,
 ) -> tuple[list['Bracket'], dict]:
     root, trees = build_full_tree(region_matchups, final_four_matchups)
     
     global_probs = compute_all_path_probs_tree(root, cache)
     compute_dp(root, global_probs)
     
-    region_path_probs = {}
-    for region in region_matchups.keys():
-        region_path_probs[region] = {t.name: global_probs[t.name][4] for pair in region_matchups[region] for t in pair}
-        
-    combos, combo_probs = enumerate_final_four_combos(region_path_probs, top_k_per_region)
+    # NEW: collect pods and enumerate at pod level
+    all_pod_nodes = {}
+    for region, tree in trees.items():
+        for i, pod_node in enumerate(collect_pod_nodes(tree)):
+            pod_id = f"{region}_{i}"
+            all_pod_nodes[pod_id] = pod_node
+
+    combos, combo_probs = enumerate_pod_combos(trees, global_probs, top_k_per_pod)
     selected_combos = select_diverse_combos(combos, combo_probs, n_brackets, diversity_weight)
     
     upset_premiums = compute_upset_premiums(region_matchups, global_probs, cache)
     
     out_brackets = []
     for i, combo in enumerate(selected_combos):
-        b = evaluate_combo_and_build(combo, trees, root, global_probs, region_matchups)
+        b = evaluate_pod_combo_and_build(
+            combo, all_pod_nodes, trees, root, global_probs,
+            region_matchups, final_four_matchups, all_teams_by_name
+        )
         b.strategy_name = f"Analytical B{i+1}"
-        b.notes = [f"Forced F4: {', '.join(combo.values())}"]
+        # Summarize forced picks by region for notes
+        for region in trees:
+            pod_winners = [combo[f"{region}_{j}"] for j in range(4) if f"{region}_{j}" in combo]
+            b.notes.append(f"Forced S16 ({region}): {', '.join(pod_winners)}")
         out_brackets.append(b)
         
     from simulate import compute_bracket_diversity

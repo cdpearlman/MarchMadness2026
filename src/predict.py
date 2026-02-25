@@ -57,12 +57,8 @@ def predict_matchup(
     # Build a single-row DataFrame with A_ and B_ columns
     row = {}
     for col in feature_cols:
-        if col == "SeedNum":
-            row[f"A_{col}"] = team_a.get("SeedNum", np.nan)
-            row[f"B_{col}"] = team_b.get("SeedNum", np.nan)
-        else:
-            row[f"A_{col}"] = team_a.get(col, np.nan)
-            row[f"B_{col}"] = team_b.get(col, np.nan)
+        row[f"A_{col}"] = team_a.get(col, np.nan)
+        row[f"B_{col}"] = team_b.get(col, np.nan)
 
     row_df = pd.DataFrame([row])
 
@@ -123,7 +119,7 @@ def predict_all_matchups(
 ) -> pd.DataFrame:
     """Generate win probabilities for all possible first-round matchups."""
     teams = get_tournament_teams(stats, season)
-    feature_cols = config.FEATURES + ["SeedNum"]
+    feature_cols = config.FEATURES
 
     if len(teams) == 0:
         print(f"  ⚠️  No tournament teams found for {season}")
@@ -226,7 +222,7 @@ def main():
             print(f"  ❌ Could not find team matching '{args.matchup[1]}' in {season}")
             return
 
-        feature_cols = config.FEATURES + ["SeedNum"]
+        feature_cols = config.FEATURES
         result = predict_matchup(team_a, team_b, models, scaler, feature_cols)
 
         team_a_name = result["team_a"]
