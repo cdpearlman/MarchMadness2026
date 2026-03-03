@@ -1,6 +1,9 @@
 """
 Configuration for March Madness predictive model.
 Contains file paths, feature definitions, and team name overrides.
+
+Data source: Barttorvik (barttorvik.com) team-tables_each.php CSVs.
+Column names are native Barttorvik names from the 40-column CSV export.
 """
 
 from pathlib import Path
@@ -16,6 +19,7 @@ TEAM_STATS_CSV = DATA_DIR / "team_stats.csv"
 TOURNEY_RESULTS_CSV = DATA_DIR / "MNCAATourneyDetailedResults.csv"
 MTEAMS_CSV = DATA_DIR / "MTeams.csv"
 MTEAM_SPELLINGS_CSV = DATA_DIR / "MTeamSpellings.csv"
+SEED_REFERENCE_CSV = DATA_DIR / "data" / "seed_reference.csv"
 
 TEAM_MAPPING_CSV = PROCESSED_DIR / "team_name_mapping.csv"
 TRAINING_DATA_CSV = PROCESSED_DIR / "training_data.csv"
@@ -23,76 +27,95 @@ TRAINING_DATA_CSV = PROCESSED_DIR / "training_data.csv"
 # ---------------------------------------------------------------------------
 # Team-name column in team_stats.csv used for matching
 # ---------------------------------------------------------------------------
-STATS_TEAM_NAME_COL = "Mapped ESPN Team Name"
+STATS_TEAM_NAME_COL = "team"
 STATS_SEASON_COL = "Season"
 
 # ---------------------------------------------------------------------------
-# Manual overrides: ESPN name (lowercase) -> TeamID
-# These are the 7 names that don't match via MTeamSpellings.csv
+# Manual overrides: Barttorvik team name (lowercase) -> TeamID
+# Populated after running team_matching.py on barttorvik data
 # ---------------------------------------------------------------------------
 MANUAL_OVERRIDES: dict[str, int] = {
-    "app state": 1111,          # Appalachian St
-    "miami": 1274,              # Miami FL (not Miami OH = 1275)
-    "queens university": 1361,  # Queens NC
-    "st. thomas-minnesota": 1384,  # St Thomas MN
-    "ualbany": 1107,            # SUNY Albany
-    "ul monroe": 1349,          # UL Monroe
-    "ut rio grande valley": 1396,  # UT Rio Grande Valley
+    # Carried over from KenPom era (may still appear)
+    "app state": 1111,              # Appalachian St
+    "miami": 1274,                  # Miami FL (not Miami OH = 1275)
+    "ualbany": 1107,                # SUNY Albany
+    "ut rio grande valley": 1396,   # UT Rio Grande Valley
+    # Barttorvik name mismatches
+    "arkansas pine bluff": 1115,
+    "bethune cookman": 1126,
+    "cal st. bakersfield": 1167,
+    "illinois chicago": 1227,       # IL Chicago
+    "louisiana monroe": 1419,       # ULM
+    "mississippi valley st.": 1290,
+    "queens": 1474,                 # Queens NC
+    "saint francis": 1384,          # Saint Francis PA
+    "southeast missouri st.": 1369,
+    "st. francis ny": 1383,
+    "st. thomas-minnesota": 1384,   # St Thomas MN
+    "tarleton st.": 1470,
+    "tennessee martin": 1404,       # TN Martin
+    "texas a&m corpus chris": 1394,
+    "winston salem st.": 1445,
 }
 
 # ---------------------------------------------------------------------------
-# Features to use (exact column names from team_stats.csv)
+# Features to use (exact Barttorvik column names from team_stats.csv)
 # All will be converted to differentials (TeamA - TeamB).
-# Using Pre-Tournament variants where available to avoid data leakage.
+# Pre-tournament filtering is done at download time (end date = Selection Sunday).
 # ---------------------------------------------------------------------------
-FEATURES_PRE_TOURNAMENT = [
-    # --- Adjusted efficiency (pre-tournament) ---
-    "Pre-Tournament.AdjOE",
-    "Pre-Tournament.AdjDE",
-    "Pre-Tournament.AdjTempo",
-    "Pre-Tournament.AdjEM",
+FEATURES_ADJUSTED = [
+    "adj_o",            # Adjusted offensive efficiency
+    "adj_d",            # Adjusted defensive efficiency
+    "adj_t",            # Adjusted tempo
+    "adj_em",           # Adjusted efficiency margin (derived: adj_o - adj_d)
 ]
 
 FEATURES_FOUR_FACTORS_OFFENSE = [
-    "eFGPct",       # Effective field goal %
-    "TOPct",        # Turnover %
-    "ORPct",        # Offensive rebound %
-    "FTRate",       # Free-throw rate
+    "efg",              # Effective FG% (offense)
+    "tov_rate",         # Turnover rate (offense)
+    "oreb_rate",        # Offensive rebound rate
+    "ftr",              # Free throw rate (offense) = FTA/FGA
 ]
 
 FEATURES_SHOOTING = [
-    "FG2Pct",       # 2-point FG %
-    "FG3Pct",       # 3-point FG %
-    "FTPct",        # Free-throw %
-    "FG3Rate",      # 3-point attempt rate
+    "two_pt_pct",       # 2-point FG%
+    "three_pt_pct",     # 3-point FG%
+    "ft_pct",           # Free throw %
+    "three_fg_rate",    # 3-point attempt rate
 ]
 
 FEATURES_OPPONENT = [
-    "OppFG2Pct",    # Opponent 2-point FG %
-    "OppFG3Pct",    # Opponent 3-point FG %
-    "OppFTPct",     # Opponent FT %
-    "OppFG3Rate",   # Opponent 3-point attempt rate
-    "OppBlockPct",  # Opponent block %
-    "OppStlRate",   # Opponent steal rate (how often they steal from us)
+    "def_two_pt_pct",   # Opponent 2-point FG%
+    "def_three_pt_pct", # Opponent 3-point FG%
+    "def_ft_pct",       # Opponent FT%
+    "def_three_fg_rate",# Opponent 3-point attempt rate
+    "block_rate_allowed",  # Opponent block rate
+]
+
+FEATURES_DEFENSE = [
+    "def_efg",          # Defensive eFG% allowed
+    "def_tov_rate",     # Defensive turnover rate forced
+    "dreb_rate",        # Defensive rebound rate (opponent OR%)
+    "def_ftr",          # Defensive free throw rate allowed
 ]
 
 FEATURES_MISCELLANEOUS = [
-    "BlockPct",     # Block %
-    "StlRate",      # Steal rate
-    "Net Rating",   # Net rating
+    "block_rate",       # Block rate
+    "barthag",          # Win probability vs average D1 team (replaces Net Rating)
 ]
 
 FEATURES_PHYSICAL = [
-    "EffectiveHeight",  # Available from 2007+
-    "Experience",       # Available from 2007+
+    "eff_height",       # Effective height (available all Barttorvik seasons)
+    "experience",       # Team experience (available all Barttorvik seasons)
 ]
 
 # Combined feature list (order preserved)
 FEATURES: list[str] = (
-    FEATURES_PRE_TOURNAMENT
+    FEATURES_ADJUSTED
     + FEATURES_FOUR_FACTORS_OFFENSE
     + FEATURES_SHOOTING
     + FEATURES_OPPONENT
+    + FEATURES_DEFENSE
     + FEATURES_MISCELLANEOUS
     + FEATURES_PHYSICAL
 )
@@ -131,10 +154,10 @@ RANDOM_FOREST_PARAMS = dict(
 # Ensemble weights (LogReg, XGBoost, RF) — will be optimised via CV
 ENSEMBLE_WEIGHTS = [0.30, 0.45, 0.25]
 
-# Seasons to include in training (overlap of stats + tourney results)
-TRAIN_SEASONS = list(range(2003, 2025))  # 2003-2024 inclusive
+# Seasons to include in training (Barttorvik data starts 2008)
+TRAIN_SEASONS = list(range(2008, 2026))  # 2008-2025 inclusive
 # 2020 had no tournament
 TRAIN_SEASONS.remove(2020)
 
-# Physical features only available from 2007
-PHYSICAL_FEATURE_START_SEASON = 2007
+# Physical features available for all Barttorvik seasons (2008+)
+PHYSICAL_FEATURE_START_SEASON = 2008

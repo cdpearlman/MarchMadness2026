@@ -134,8 +134,8 @@ if __name__ == "__main__":
 
     if missing:
         id_to_name = build_team_id_to_name()
-        print(f"\n⚠️  {len(missing)} tournament teams have no mapping:")
+        print(f"\n[!] {len(missing)} tournament teams have no mapping:")
         for tid in sorted(missing):
             print(f"  TeamID {tid}: {id_to_name.get(tid, '???')}")
     else:
-        print(f"\n✅ All {len(tourney_ids)} tournament teams are covered!")
+        print(f"\n[OK] All {len(tourney_ids)} tournament teams are covered!")

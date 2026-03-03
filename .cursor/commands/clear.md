@@ -29,6 +29,6 @@ The user is about to clear the context window and/or change topics. Before they 
 ## Rules
 
 - Data files (sessions, decisions, lessons) are **append-only** — never remove or overwrite past entries.
-- Always **show the user what you're about to write** before writing it.
+- Since the clear command was run, you may update the memory files without explicit confirmation, but make sure to explain what you appended and your reasoning.
 - If nothing meaningful happened in the session (e.g., just Q&A with no code changes), say so and skip the update.
 - Keep session entries concise — a few lines per field, not paragraphs.

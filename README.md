@@ -1,22 +1,29 @@
 # March Madness 2026 — Predictive Model
 
-A Python machine learning pipeline that predicts NCAA March Madness tournament game outcomes using KenPom efficiency metrics. The model uses **stat differentials** (Team A − Team B) as features and evaluates multiple classifiers via Leave-One-Season-Out cross-validation.
+A Python machine learning pipeline that predicts NCAA March Madness tournament game outcomes using Barttorvik efficiency metrics. The model uses **stat differentials** (Team A − Team B) as features and evaluates multiple classifiers via Leave-One-Season-Out cross-validation.
 
 ## Current Results
 
 | Model | Log-Loss | Accuracy | AUC-ROC |
 |---|---|---|---|
-| **Logistic Regression** | **0.364** | **83.3%** | **0.920** |
-| XGBoost | 0.399 | 83.1% | 0.899 |
-| Ensemble (LR+XGB+RF) | 0.394 | 83.3% | 0.908 |
+| **Random Forest** | **0.564** | **70.3%** | **0.775** |
+| XGBoost | 0.574 | 70.7% | 0.769 |
+| Logistic Regression | 0.575 | 69.8% | 0.769 |
+| Ensemble (LR+XGB+RF) | 0.567 | 70.7% | 0.776 |
 
-Evaluated via LOSO CV across 21 tournament seasons (2003–2024, excl. 2020).
+Evaluated via LOSO CV across 17 tournament seasons (2008–2025, excl. 2020).
 
 ## Quick Start
 
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Download Barttorvik data (opens browser for each season)
+python download_barttorvik.py
+
+# Ingest season CSVs into team_stats.csv
+python ingest_barttorvik.py
 
 # Run team name matching (generates data/processed/team_name_mapping.csv)
 python src/team_matching.py
@@ -27,52 +34,63 @@ python src/models.py
 # Predict a single matchup
 python src/predict.py --matchup "Duke" "Houston"
 
-# Generate all first-round bracket predictions for 2025
-python src/predict.py --season 2025
+# Generate all first-round bracket predictions for 2026
+python src/predict.py --season 2026
 
 # Force re-train models before predicting
-python src/predict.py --retrain --season 2025
+python src/predict.py --retrain --season 2026
 ```
 
 ## Project Structure
 
 ```
 MarchMadness26/
-├── team_stats.csv                      # KenPom data (8,315 rows, 165 cols, 2002-2025)
-├── MNCAATourneyDetailedResults.csv     # Tournament game results (1,382 games, 2003-2024)
+├── team_stats.csv                      # Barttorvik data (6,689 rows, 42 cols, 2008-2026)
+├── download_barttorvik.py              # Opens browser to download per-season CSVs
+├── ingest_barttorvik.py                # Combines season CSVs → team_stats.csv
+├── MNCAATourneyDetailedResults.csv     # Tournament game results (2003-2024)
 ├── MTeams.csv                          # TeamID → TeamName (380 teams)
-├── MTeamSpellings.csv                  # Spelling variants → TeamID (1,177 entries)
+├── MTeamSpellings.csv                  # Spelling variants → TeamID
 ├── requirements.txt
 ├── README.md
-├── HANDOFF.md                          # Agent continuation guide
+│
+├── data/
+│   ├── barttorvik/                     # Per-season Barttorvik CSVs (YYYY.csv)
+│   └── seed_reference.csv             # Historical tournament seeds (from Kaggle)
 │
 ├── src/
 │   ├── config.py                       # All paths, features, hyperparams, overrides
-│   ├── team_matching.py                # ESPN name → TeamID mapping
+│   ├── team_matching.py                # Barttorvik name → TeamID mapping
 │   ├── data_prep.py                    # Joins games + stats → training rows
 │   ├── feature_engineering.py          # Computes stat differentials
 │   ├── models.py                       # LogReg, XGBoost, RF, Ensemble + LOSO CV + SHAP
 │   ├── predict.py                      # CLI for matchup/bracket predictions
+│   ├── bracket_engine.py               # Analytical DP bracket optimization
+│   ├── simulate.py                     # Bracket simulation and strategy generation
 │   └── run_eval.py                     # Helper to run full eval and save results
 │
 ├── data/processed/
-│   ├── team_name_mapping.csv           # Generated: ESPN → TeamID lookup
+│   ├── team_name_mapping.csv           # Generated: Barttorvik name → TeamID lookup
 │   ├── training_data.csv               # Generated: joined game+stats dataset
 │   ├── logistic_cv_results.csv         # Per-season LOSO results
 │   ├── xgboost_cv_results.csv
 │   ├── rf_cv_results.csv
 │   ├── ensemble_cv_results.csv
 │   ├── shap_importance.csv             # Feature importance rankings
-│   └── predictions_2025.csv            # 2025 bracket predictions
+│   └── predictions_2026.csv            # 2026 bracket predictions
 │
-└── models/
-    └── trained_models.pkl              # Pickled final models + scaler
+├── models/
+│   └── trained_models.pkl              # Pickled final models + scaler
+│
+└── tune_diversity.py                   # Parameter tuning for bracket diversity weights
 ```
 
 ## Data Pipeline
 
 ```
-team_stats.csv ──────────┐
+data/barttorvik/YYYY.csv ──→ ingest_barttorvik.py ──→ team_stats.csv
+                                                           │
+team_stats.csv ──────────┐                                 │
                          ├──→ team_matching.py ──→ team_name_mapping.csv
 MTeamSpellings.csv ──────┘         │
                                    ▼
@@ -89,6 +107,10 @@ MNCAATourneyDetailedResults.csv → data_prep.py → training_data.csv
                                                       ▼
                                               predict.py
                                        (bracket predictions)
+                                                      │
+                                                      ▼
+                                           bracket_engine.py
+                                       (optimized bracket picks)
 ```
 
 ## Features Used (24 differential features)
@@ -97,23 +119,25 @@ All features are computed as `TeamA_value - TeamB_value`:
 
 | Category | Features |
 |---|---|
-| Efficiency (Pre-Tournament) | AdjOE, AdjDE, AdjTempo, AdjEM |
-| Four Factors (Offense) | eFGPct, TOPct, ORPct, FTRate |
-| Shooting | FG2Pct, FG3Pct, FTPct, FG3Rate |
-| Opponent Shooting | OppFG2Pct, OppFG3Pct, OppFTPct, OppFG3Rate |
-| Steal/Block | StlRate, OppStlRate, BlockPct, OppBlockPct |
-| Miscellaneous | Net Rating |
-| Physical (2007+) | EffectiveHeight, Experience |
-| Meta | Seed (numeric) |
+| Adjusted Efficiency | adj_o, adj_d, adj_t, adj_em |
+| Four Factors (Offense) | efg, tov_rate, oreb_rate, ftr |
+| Four Factors (Defense) | def_efg, def_tov_rate, dreb_rate, def_ftr |
+| Shooting | two_pt_pct, three_pt_pct, ft_pct, three_fg_rate |
+| Opponent Shooting | def_two_pt_pct, def_three_pt_pct, def_ft_pct, def_three_fg_rate |
+| Defense | block_rate, block_rate_allowed |
+| Miscellaneous | barthag |
+| Physical (2008+) | eff_height, experience |
+| Meta | SeedNum |
 
 ## Key Design Decisions
 
-- **Pre-Tournament stats only**: Uses `Pre-Tournament.AdjOE` etc. to avoid data leakage from tournament results
+- **Pre-Tournament stats only**: Barttorvik CSVs filtered to end on Selection Sunday to avoid data leakage
 - **Two rows per game**: Each game creates two training rows (swap Team A/B) to prevent positional bias
-- **LOSO CV**: Leave-One-Season-Out ensures no future data leaks into training, simulates real prediction conditions
-- **Missing physical features**: Pre-2007 rows fill height/experience differentials with 0 (no advantage assumed)
+- **LOSO CV**: Leave-One-Season-Out ensures no future data leaks into training
+- **Analytical DP bracket optimization**: Evaluates full paths through the bracket for strategic upset picks and diversity
 
 ## Data Sources
 
-- **KenPom Stats**: [Kaggle — Jonathan Pilafas](https://www.kaggle.com/datasets/jonathanpilafas/2024-march-madness-statistical-analysis)
+- **Team Stats**: [Barttorvik](https://barttorvik.com) — T-Rank team efficiency ratings
 - **Tournament Game Results**: [Kaggle — March Machine Learning Mania](https://www.kaggle.com/competitions/march-machine-learning-mania-2024/data)
+- **Seeds**: Extracted from Kaggle KenPom dataset (historical reference)

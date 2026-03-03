@@ -31,6 +31,10 @@ def compute_differentials(df: pd.DataFrame) -> pd.DataFrame:
     """
     feature_cols = [c for c in config.FEATURES if f"A_{c}" in df.columns]
 
+    # Include SeedNum if present (it's added by data_prep but not in config.FEATURES)
+    if "A_SeedNum" in df.columns:
+        feature_cols.append("SeedNum")
+
     result = df[["Season", "Label"]].copy()
 
     for col in feature_cols:

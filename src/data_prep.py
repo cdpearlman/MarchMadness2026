@@ -41,7 +41,7 @@ def load_team_stats() -> pd.DataFrame:
     before = len(stats)
     stats = stats.dropna(subset=["TeamID"])
     if len(stats) < before:
-        print(f"  ⚠️  Dropped {before - len(stats)} rows with no TeamID")
+        print(f"  [!] Dropped {before - len(stats)} rows with no TeamID")
 
     stats["TeamID"] = stats["TeamID"].astype(int)
     stats[config.STATS_SEASON_COL] = stats[config.STATS_SEASON_COL].astype(int)
@@ -135,7 +135,7 @@ def build_training_data() -> pd.DataFrame:
     df = pd.DataFrame(rows)
 
     if skipped:
-        print(f"  ⚠️  Skipped {skipped} games (missing team stats)")
+        print(f"  [!] Skipped {skipped} games (missing team stats)")
 
     print(f"  Created {len(df)} training rows from {len(df)//2} games")
     return df
