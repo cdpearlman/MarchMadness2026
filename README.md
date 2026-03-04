@@ -39,6 +39,12 @@ python src/predict.py --season 2026
 
 # Force re-train models before predicting
 python src/predict.py --retrain --season 2026
+
+# Generate optimized bracket set (uses data/bracket_YYYY.json if available)
+python src/simulate.py --season 2025 --no-sim --n-brackets 5
+
+# Full pipeline with Monte Carlo validation
+python src/simulate.py --season 2025 --n-sims 10000 --n-brackets 5
 ```
 
 ## Project Structure
@@ -77,6 +83,8 @@ MarchMadness26/
 │   ├── rf_cv_results.csv
 │   ├── ensemble_cv_results.csv
 │   ├── shap_importance.csv             # Feature importance rankings
+│   ├── reach_probabilities_YYYY.csv    # Per-team reach probabilities by round
+│   ├── brackets_YYYY.json             # Generated bracket set with diversity report
 │   └── predictions_2026.csv            # 2026 bracket predictions
 │
 ├── models/

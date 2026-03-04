@@ -102,7 +102,7 @@ def compute_all_path_probs_tree(root: BracketNode, cache: 'MatchupCache') -> dic
             
         for t_b in node.right.teams:
             p_b = node.right.node_probs[t_b.name]
-            p_win = sum(p_a * p_b * cache.win_prob(t_b, t_a) for t_a in node.left.teams)
+            p_win = sum(node.left.node_probs[t_a.name] * p_b * cache.win_prob(t_b, t_a) for t_a in node.left.teams)
             reach_probs[t_b.name][node.round_num] = p_win
             node.node_probs[t_b.name] = p_win
             

@@ -673,7 +673,7 @@ def print_diversity_report(diversity: dict, brackets: list[Bracket]) -> None:
     print(f"  Mean pairwise overlap: {diversity['mean_overlap']:.1%}")
     print(f"  Min pairwise overlap:  {diversity['min_overlap']:.1%}")
     if diversity['mean_overlap'] > 0.80:
-        print(f"  ⚠️  Brackets are very similar (>80% overlap). Consider raising temperature.")
+        print(f"  [!] Brackets are very similar (>80% overlap). Consider raising temperature.")
     print()
     # Header
     header = f"  {'':12}" + "".join(f"  B{j+1:>4}" for j in range(n))
@@ -682,7 +682,7 @@ def print_diversity_report(diversity: dict, brackets: list[Bracket]) -> None:
         row = f"  B{i+1} {brackets[i].strategy_name[:10]:<10}"
         for j in range(n):
             if i == j:
-                row += f"  {'—':>5}"
+                row += f"  {'---':>5}"
             else:
                 key = f"B{min(i,j)+1}_vs_B{max(i,j)+1}"
                 v = diversity['pairwise'].get(key, 0)
@@ -924,16 +924,36 @@ def build_region_matchups_from_file(
         for _, row in season_stats.iterrows()
     }
 
+    # Bracket-name -> Barttorvik-name aliases for common mismatches
+    bracket_aliases: dict[str, str] = {
+        "ole miss": "mississippi",
+        "uconn": "connecticut",
+        "norfolk state": "norfolk st.",
+        "mississippi state": "mississippi st.",
+        "colorado state": "colorado st.",
+        "michigan state": "michigan st.",
+        "iowa state": "iowa st.",
+        "utah state": "utah st.",
+        "alabama state": "alabama st.",
+        "mcneese": "mcneese st.",
+        "omaha": "nebraska omaha",
+    }
+
     def find_stats(name: str, seed: int) -> pd.Series:
-        # Try exact match first, then partial
         key = name.lower()
+        key = bracket_aliases.get(key, key)
         if key in name_to_stats:
             return name_to_stats[key]
+        # Partial match: prefer shortest Barttorvik name that contains key
+        # (avoids "alabama" matching "alabama state" when we want exact "alabama")
+        candidates = []
         for k, v in name_to_stats.items():
             if key in k or k in key:
-                return v
-        # Fallback: empty series with seed info so sim can still run
-        print(f"  ⚠️  No stats found for '{name}' in {season} — using seed-only fallback")
+                candidates.append((k, v))
+        if candidates:
+            candidates.sort(key=lambda x: abs(len(x[0]) - len(key)))
+            return candidates[0][1]
+        print(f"  [!] No stats found for '{name}' in {season} -- using seed-only fallback")
         return pd.Series({config.STATS_TEAM_NAME_COL: name, "SeedNum": seed})
 
     region_matchups: dict[str, list[tuple[Team, Team]]] = {}
@@ -975,7 +995,7 @@ def build_region_matchups_from_stats(
 
     if not has_regions:
         # No region data — distribute teams into 4 pseudo-regions by seed groups
-        print("  ⚠️  No region data found. Distributing teams into pseudo-regions by seed.")
+        print("  [!] No region data found. Distributing teams into pseudo-regions by seed.")
         pseudo_regions = ["East", "West", "South", "Midwest"]
         # Group all seed-1s into different regions, etc.
         by_seed: dict[int, list[Team]] = defaultdict(list)
@@ -1045,7 +1065,7 @@ def run(
             region_matchups, final_four_matchups, all_teams_by_name = \
                 build_region_matchups_from_file(bracket_data, stats, season)
         else:
-            print(f"  ⚠️  No bracket file found for {season}. Using auto-seeding fallback.")
+            print(f"  [!] No bracket file found for {season}. Using auto-seeding fallback.")
             print(f"  To use hard-coded bracket: create data/bracket_{season}.json")
             region_matchups, final_four_matchups, all_teams_by_name = \
                 build_region_matchups_from_stats(stats, season)
@@ -1111,7 +1131,7 @@ def run(
     probs_df = pd.DataFrame(probs_records).sort_values("R64", ascending=False)
     probs_path = output_dir / f"reach_probabilities_{season}.csv"
     probs_df.to_csv(probs_path, index=False)
-    print(f"\n  Saved reach probabilities → {probs_path}")
+    print(f"\n  Saved reach probabilities -> {probs_path}")
 
     # Save brackets as JSON (include diversity report)
     brackets_data = {
@@ -1123,7 +1143,7 @@ def run(
     brackets_path = output_dir / f"brackets_{season}.json"
     with open(brackets_path, "w") as f:
         json.dump(brackets_data, f, indent=2)
-    print(f"  Saved brackets → {brackets_path}")
+    print(f"  Saved brackets -> {brackets_path}")
 
     return brackets
 

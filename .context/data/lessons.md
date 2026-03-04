@@ -43,3 +43,15 @@
 **Root cause**: Most likely the old evaluation used post-tournament stats (data leakage) or wasn't doing proper LOSO (some training seasons leaked into test folds). 83% accuracy is unrealistically high for pre-tournament-only prediction of March Madness games.
 **Fix**: Accepted 70% accuracy as the realistic baseline. This aligns with published benchmarks.
 **Rule going forward**: Be skeptical of evaluation metrics. Always verify: (1) stats are truly pre-tournament, (2) LOSO folds are clean, (3) results align with published baselines (~68-72% for NCAA tournament prediction).
+
+## 2026-03-03 — Stale closure variable in path probability computation
+**What happened**: `compute_all_path_probs_tree()` in `bracket_engine.py` computed near-zero probabilities for all right-side-of-bracket teams at every tree level. Championship probability was 0.0% for ALL 64 teams. Probability sums across teams at each round were far below expected (e.g., R32 sum=12.3 instead of 16, Champ sum=0.0001 instead of 1.0).
+**Root cause**: The second for-loop (for right-side teams) used `p_a` in a sum comprehension, but `p_a` was a stale reference to the last value from the FIRST for-loop (over left-side teams). The `t_a` iterator variable in the generator shadowed the outer loop, but `p_a` was NOT re-bound — it always held the probability of the last left-side team (typically a #16 seed at ~0.8%). Fix: replace `p_a` with `node.left.node_probs[t_a.name]`.
+**How it was caught**: Verified probability conservation — sums across teams at each round should equal the number of games (32, 16, 8, 4, 2, 1). The massive gap immediately revealed the bug.
+**Rule going forward**: When computing path probabilities in tree structures, always verify conservation: the sum of node_probs at each level must equal 1.0 for each subtree. Run this check after any change to the probability computation.
+
+## 2026-03-03 — Bracket JSON names don't match Barttorvik names
+**What happened**: Teams like "Ole Miss", "UConn", "Norfolk State" in `bracket_2025.json` had no match in `team_stats.csv` (Barttorvik uses "Mississippi", "Connecticut", "Norfolk St."). The partial matching fallback was too greedy — "alabama state" matched "alabama" because "alabama" is a substring of "alabama state".
+**Root cause**: No alias layer between bracket file names and data source names. Partial matching by substring is unreliable when short names are substrings of longer ones.
+**Fix**: Added `bracket_aliases` dict for known mismatches. Improved partial matching to prefer closest-length match.
+**Rule going forward**: When adding a new season's `bracket_YYYY.json`, test name matching first — run `build_region_matchups_from_file()` and check for "No stats found" warnings before running the full pipeline.

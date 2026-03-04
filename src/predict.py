@@ -122,7 +122,7 @@ def predict_all_matchups(
     feature_cols = config.FEATURES
 
     if len(teams) == 0:
-        print(f"  ⚠️  No tournament teams found for {season}")
+        print(f"  [!] No tournament teams found for {season}")
         return pd.DataFrame()
 
     # Standard bracket first-round matchups: 1v16, 2v15, ..., 8v9
@@ -216,10 +216,10 @@ def main():
         team_b = find_team(stats, args.matchup[1], season)
 
         if team_a is None:
-            print(f"  ❌ Could not find team matching '{args.matchup[0]}' in {season}")
+            print(f"  [X] Could not find team matching '{args.matchup[0]}' in {season}")
             return
         if team_b is None:
-            print(f"  ❌ Could not find team matching '{args.matchup[1]}' in {season}")
+            print(f"  [X] Could not find team matching '{args.matchup[1]}' in {season}")
             return
 
         feature_cols = config.FEATURES
@@ -250,8 +250,8 @@ def main():
         for _, row in results.iterrows():
             winner = row["team_a"] if row["win_prob_a_ensemble"] > 0.5 else row["team_b"]
             prob = max(row["win_prob_a_ensemble"], 1 - row["win_prob_a_ensemble"])
-            upset = "⚡ UPSET" if row["seed_a"] > row["seed_b"] and row["win_prob_a_ensemble"] > 0.5 else ""
-            upset = upset or ("⚡ UPSET" if row["seed_b"] > row["seed_a"] and row["win_prob_a_ensemble"] < 0.5 else "")
+            upset = "** UPSET" if row["seed_a"] > row["seed_b"] and row["win_prob_a_ensemble"] > 0.5 else ""
+            upset = upset or ("** UPSET" if row["seed_b"] > row["seed_a"] and row["win_prob_a_ensemble"] < 0.5 else "")
 
             print(
                 f"  #{row['seed_a']:2d} {row['team_a']:25s} vs #{row['seed_b']:2d} {row['team_b']:25s} "

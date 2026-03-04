@@ -45,3 +45,20 @@
 - 2026 tournament seeds need manual entry after Selection Sunday (March 15)
 - `predict.py`, `bracket_engine.py`, `simulate.py` not yet tested with new data (config-driven, should work)
 - Consider adding assist_rate, def_assist_rate as features (available but not currently used)
+
+## 2026-03-03 — First Bracket Engine Run (Post-Barttorvik Refactor)
+**Area**: Bracket engine pipeline, bug fixes
+**Work done**:
+- Ran bracket engine for 2025 season using `data/bracket_2025.json`
+- Fixed critical bug in `bracket_engine.py` `compute_all_path_probs_tree()`: the right-side team loop used a stale `p_a` variable (closure over last left-side team) instead of looking up `node.left.node_probs[t_a.name]` for each opponent. This caused all right-side-of-bracket teams to get near-zero reach probabilities (championship probs were 0.0% for ALL teams before fix)
+- Added `bracket_aliases` dict in `simulate.py` to map bracket JSON names to Barttorvik names (Ole Miss->Mississippi, UConn->Connecticut, Norfolk State->Norfolk St., etc.)
+- Improved partial name matching in `find_stats()` to prefer closest-length match (avoids "alabama" matching "alabama state")
+- Fixed remaining emoji/Unicode in `simulate.py` (arrow chars, em-dash) and `predict.py` (warning/error emoji)
+- Retrained model with `--retrain` flag since old pkl had stale KenPom feature names
+**Results**: Houston 28.6%, Auburn 27.8%, Duke 18.2% championship probability. 5 brackets generated with 63% mean overlap, 34% min overlap. B1/B3 have 97% overlap (near-duplicate).
+**Decisions made**: MatchupCache still uses logistic regression only (not ensemble/RF) — flagged but not changed
+**Open threads**:
+- **Bracket diversity convergence**: 4/5 brackets pick same E8/F4/champion (Houston). B1/B3 are 97% overlap. R64 is identical across all brackets. Pod-level diversity alone is insufficient — need diversification at E8/F4/champion level too
+- MatchupCache uses `win_prob_a_logistic` but RF was best performer — consider switching to ensemble or RF
+- Consider increasing `top_k_per_pod` beyond 2 for more combinatorial diversity
+- Model hyperparameter tuning still pending

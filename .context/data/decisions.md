@@ -57,3 +57,11 @@
 **Decision**: Accepted that the old baseline was likely inflated — probably from data leakage (post-tournament stats instead of pre-tournament only) or non-LOSO evaluation. Current numbers are realistic for NCAA tournament prediction.
 **Reasoning**: 70% accuracy aligns with published benchmarks for NCAA prediction. SHAP shows healthy feature distribution (adjusted efficiency metrics at top, seed not dominant). The model is learning real basketball signal.
 **Revisit if**: A rigorous re-evaluation of the KenPom pipeline shows the old numbers were legitimate
+
+## Bracket diversity needs structural improvement beyond pod-level
+**Date**: 2026-03-03
+**Context**: First bracket engine run post-Barttorvik refactor produced 5 brackets for 2025. 4/5 brackets had identical E8, F4, and champion (Houston). B1/B3 were 97% overlap. All 5 had identical R64 picks.
+**Problem**: Pod-level diversity (varying S16 winners) is insufficient because the greedy EV pass from S16 upward collapses to the same late-round picks. R64 is never diversified because picks trace downward from forced S16 winners.
+**Decision**: Flagged for next session — needs architectural changes to the diversity mechanism
+**Candidate approaches**: (1) Force diversity at E8/F4/champion level, not just pods, (2) Increase `top_k_per_pod` beyond 2, (3) Add R64 upset forcing for select matchups, (4) Use the full Final Four combo enumeration that already exists (`enumerate_final_four_combos`) instead of only pod combos, (5) Switch MatchupCache from logistic-only to ensemble/RF
+**Revisit if**: Immediately — this is the top priority for bracket quality

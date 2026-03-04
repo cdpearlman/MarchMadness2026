@@ -77,6 +77,8 @@ The goal is to maximize the probability that ONE bracket scores extremely well, 
 - Strategic upset selections where the risk/reward math favors it
 - Diversity weighting parameter to control overlap between brackets
 
+**Known limitation**: Current diversity operates only at pod level (S16 winners). The greedy EV pass from S16 upward collapses late-round picks, causing most brackets to share the same E8/F4/champion. R64 picks are never diversified. Needs structural improvement — see decisions.md for candidate approaches.
+
 ## Configuration
 
 All paths, features, hyperparameters, and overrides live in `src/config.py`. This is the single source of truth for pipeline configuration.

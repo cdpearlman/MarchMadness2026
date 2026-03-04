@@ -5,14 +5,14 @@
     "pairwise": {
       "B1_vs_B2": 0.34,
       "B1_vs_B3": 0.969,
-      "B1_vs_B4": 0.881,
-      "B1_vs_B5": 0.703,
+      "B1_vs_B4": 0.8,
+      "B1_vs_B5": 0.8,
       "B2_vs_B3": 0.355,
-      "B2_vs_B4": 0.4,
-      "B2_vs_B5": 0.5,
-      "B3_vs_B4": 0.853,
-      "B3_vs_B5": 0.68,
-      "B4_vs_B5": 0.615
+      "B2_vs_B4": 0.432,
+      "B2_vs_B5": 0.416,
+      "B3_vs_B4": 0.775,
+      "B3_vs_B5": 0.775,
+      "B4_vs_B5": 0.636
     },
     "mean_overlap": 0.63,
     "min_overlap": 0.34
@@ -20,23 +20,23 @@
   "brackets": [
     {
       "strategy": "Analytical B1",
-      "expected_score": 73.01,
+      "expected_score": 105.83,
       "notes": [
-        "Forced S16 (South): Auburn, Michigan, Michigan State, Iowa State",
+        "Forced S16 (South): Auburn, Texas A&M, Michigan State, Iowa State",
         "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Oregon, Alabama, Wisconsin",
+        "Forced S16 (East): Duke, Arizona, Alabama, Wisconsin",
         "Forced S16 (Midwest): Houston, Purdue, Tennessee, Kentucky"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Creighton",
+          "Louisville",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "New Mexico",
+          "Marquette",
           "Florida",
           "UConn",
           "Colorado State",
@@ -44,7 +44,7 @@
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Arkansas",
+          "Kansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -64,7 +64,7 @@
         ],
         "2": [
           "Auburn",
-          "Michigan",
+          "Texas A&M",
           "Michigan State",
           "Iowa State",
           "Florida",
@@ -72,7 +72,7 @@
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Oregon",
+          "Arizona",
           "Alabama",
           "Wisconsin",
           "Houston",
@@ -82,9 +82,9 @@
         ],
         "3": [
           "Auburn",
-          "Michigan State",
+          "Iowa State",
           "Florida",
-          "St. John's",
+          "Texas Tech",
           "Duke",
           "Alabama",
           "Houston",
@@ -101,29 +101,29 @@
           "Houston"
         ],
         "6": [
-          "Auburn"
+          "Houston"
         ]
       }
     },
     {
       "strategy": "Analytical B2",
-      "expected_score": 28.2,
+      "expected_score": 38.23,
       "notes": [
-        "Forced S16 (South): Creighton, Texas A&M, Ole Miss, New Mexico",
-        "Forced S16 (West): UConn, Colorado State, Missouri, Arkansas",
-        "Forced S16 (East): Baylor, Arizona, BYU, Saint Mary's",
+        "Forced S16 (South): Louisville, Michigan, Ole Miss, Marquette",
+        "Forced S16 (West): UConn, Colorado State, Missouri, Kansas",
+        "Forced S16 (East): Baylor, Oregon, BYU, Saint Mary's",
         "Forced S16 (Midwest): Gonzaga, Clemson, Illinois, UCLA"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Creighton",
+          "Louisville",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "New Mexico",
+          "Marquette",
           "Florida",
           "UConn",
           "Colorado State",
@@ -131,7 +131,7 @@
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Arkansas",
+          "Kansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -150,16 +150,16 @@
           "UCLA"
         ],
         "2": [
-          "Creighton",
-          "Texas A&M",
+          "Louisville",
+          "Michigan",
           "Ole Miss",
-          "New Mexico",
+          "Marquette",
           "UConn",
           "Colorado State",
           "Missouri",
-          "Arkansas",
+          "Kansas",
           "Baylor",
-          "Arizona",
+          "Oregon",
           "BYU",
           "Saint Mary's",
           "Gonzaga",
@@ -168,49 +168,49 @@
           "UCLA"
         ],
         "3": [
-          "Texas A&M",
-          "Ole Miss",
+          "Louisville",
+          "Marquette",
           "UConn",
-          "Missouri",
-          "Arizona",
-          "BYU",
+          "Kansas",
+          "Oregon",
+          "Saint Mary's",
           "Gonzaga",
-          "Illinois"
+          "UCLA"
         ],
         "4": [
-          "Texas A&M",
-          "UConn",
-          "Arizona",
+          "Marquette",
+          "Kansas",
+          "Saint Mary's",
           "Gonzaga"
         ],
         "5": [
-          "Texas A&M",
+          "Kansas",
           "Gonzaga"
         ],
         "6": [
-          "Texas A&M"
+          "Gonzaga"
         ]
       }
     },
     {
       "strategy": "Analytical B3",
-      "expected_score": 72.13,
+      "expected_score": 105.76,
       "notes": [
         "Forced S16 (South): Auburn, Texas A&M, Michigan State, Iowa State",
         "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Oregon, Alabama, Wisconsin",
-        "Forced S16 (Midwest): Houston, Purdue, Tennessee, Kentucky"
+        "Forced S16 (East): Duke, Arizona, Alabama, Wisconsin",
+        "Forced S16 (Midwest): Houston, Purdue, Tennessee, UCLA"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Creighton",
+          "Louisville",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "New Mexico",
+          "Marquette",
           "Florida",
           "UConn",
           "Colorado State",
@@ -218,7 +218,7 @@
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Arkansas",
+          "Kansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -246,19 +246,19 @@
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Oregon",
+          "Arizona",
           "Alabama",
           "Wisconsin",
           "Houston",
           "Purdue",
           "Tennessee",
-          "Kentucky"
+          "UCLA"
         ],
         "3": [
           "Auburn",
-          "Michigan State",
+          "Iowa State",
           "Florida",
-          "St. John's",
+          "Texas Tech",
           "Duke",
           "Alabama",
           "Houston",
@@ -275,29 +275,29 @@
           "Houston"
         ],
         "6": [
-          "Auburn"
+          "Houston"
         ]
       }
     },
     {
       "strategy": "Analytical B4",
-      "expected_score": 68.15,
+      "expected_score": 102.17,
       "notes": [
-        "Forced S16 (South): Auburn, Michigan, Michigan State, Iowa State",
-        "Forced S16 (West): Florida, Colorado State, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Arizona, Alabama, Wisconsin",
-        "Forced S16 (Midwest): Houston, Clemson, Tennessee, UCLA"
+        "Forced S16 (South): Auburn, Texas A&M, Michigan State, Marquette",
+        "Forced S16 (West): Florida, Maryland, Missouri, Kansas",
+        "Forced S16 (East): Duke, Arizona, Alabama, Saint Mary's",
+        "Forced S16 (Midwest): Houston, Clemson, Tennessee, Kentucky"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Creighton",
+          "Louisville",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "New Mexico",
+          "Marquette",
           "Florida",
           "UConn",
           "Colorado State",
@@ -305,7 +305,7 @@
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Arkansas",
+          "Kansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -325,27 +325,27 @@
         ],
         "2": [
           "Auburn",
-          "Michigan",
+          "Texas A&M",
           "Michigan State",
-          "Iowa State",
+          "Marquette",
           "Florida",
-          "Colorado State",
-          "St. John's",
-          "Texas Tech",
+          "Maryland",
+          "Missouri",
+          "Kansas",
           "Duke",
           "Arizona",
           "Alabama",
-          "Wisconsin",
+          "Saint Mary's",
           "Houston",
           "Clemson",
           "Tennessee",
-          "UCLA"
+          "Kentucky"
         ],
         "3": [
           "Auburn",
           "Michigan State",
           "Florida",
-          "St. John's",
+          "Kansas",
           "Duke",
           "Alabama",
           "Houston",
@@ -362,29 +362,29 @@
           "Houston"
         ],
         "6": [
-          "Auburn"
+          "Houston"
         ]
       }
     },
     {
       "strategy": "Analytical B5",
-      "expected_score": 57.63,
+      "expected_score": 99.64,
       "notes": [
-        "Forced S16 (South): Auburn, Michigan, Ole Miss, New Mexico",
-        "Forced S16 (West): Florida, Maryland, Missouri, Arkansas",
-        "Forced S16 (East): Duke, Oregon, BYU, Saint Mary's",
+        "Forced S16 (South): Auburn, Michigan, Ole Miss, Iowa State",
+        "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
+        "Forced S16 (East): Duke, Oregon, BYU, Wisconsin",
         "Forced S16 (Midwest): Houston, Purdue, Illinois, Kentucky"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Creighton",
+          "Louisville",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "New Mexico",
+          "Marquette",
           "Florida",
           "UConn",
           "Colorado State",
@@ -392,7 +392,7 @@
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Arkansas",
+          "Kansas",
           "Duke",
           "Baylor",
           "Oregon",
@@ -414,15 +414,15 @@
           "Auburn",
           "Michigan",
           "Ole Miss",
-          "New Mexico",
+          "Iowa State",
           "Florida",
           "Maryland",
-          "Missouri",
-          "Arkansas",
+          "St. John's",
+          "Texas Tech",
           "Duke",
           "Oregon",
           "BYU",
-          "Saint Mary's",
+          "Wisconsin",
           "Houston",
           "Purdue",
           "Illinois",
@@ -430,11 +430,11 @@
         ],
         "3": [
           "Auburn",
-          "Ole Miss",
+          "Iowa State",
           "Florida",
-          "Missouri",
+          "Texas Tech",
           "Duke",
-          "BYU",
+          "Wisconsin",
           "Houston",
           "Kentucky"
         ],
@@ -449,7 +449,7 @@
           "Houston"
         ],
         "6": [
-          "Auburn"
+          "Houston"
         ]
       }
     }
