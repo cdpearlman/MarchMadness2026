@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 import itertools
 from collections import defaultdict
 from typing import TYPE_CHECKING, Optional, Tuple, List, Dict, Any
@@ -414,55 +415,149 @@ def compute_upset_premiums(
     return premiums
 
 
+def _get_regional_alternatives(
+    region_matchups: dict[str, list[tuple['Team', 'Team']]],
+    global_probs: dict[str, dict[int, float]],
+    champ_name: str,
+) -> dict[str, list[str]]:
+    """
+    For each non-champion region, return the top 2 teams by regional
+    championship probability (round 4 = E8 winner = regional champ).
+    """
+    champ_region = None
+    for region, matchups in region_matchups.items():
+        for t_a, t_b in matchups:
+            if t_a.name == champ_name or t_b.name == champ_name:
+                champ_region = region
+                break
+        if champ_region:
+            break
+
+    alternatives: dict[str, list[str]] = {}
+    for region, matchups in region_matchups.items():
+        if region == champ_region:
+            continue
+        teams_in_region = []
+        for t_a, t_b in matchups:
+            teams_in_region.extend([t_a, t_b])
+        ranked = sorted(
+            teams_in_region,
+            key=lambda t: global_probs.get(t.name, {}).get(4, 0),
+            reverse=True,
+        )
+        alternatives[region] = [t.name for t in ranked[:2]]
+
+    return alternatives
+
+
 def run_analytical(
     season: int,
     region_matchups: dict[str, list[tuple['Team', 'Team']]],
     final_four_matchups: list[tuple[str, str]],
     all_teams_by_name: dict[str, 'Team'],
     cache: 'MatchupCache',
-    n_brackets: int = 5,
-    top_k_per_pod: int = 2,
-    diversity_weight: float = 0.7,
+    n_brackets: int = 15,
+    n_champions: Optional[int] = None,
+    temperature_tiers: Optional[List[float]] = None,
+    candidates_per_cell: int = 100,
 ) -> tuple[list['Bracket'], dict]:
-    root, trees = build_full_tree(region_matchups, final_four_matchups)
-    
-    global_probs = compute_all_path_probs_tree(root, cache)
-    compute_dp(root, global_probs)
-    
-    # NEW: collect pods and enumerate at pod level
-    all_pod_nodes = {}
-    for region, tree in trees.items():
-        for i, pod_node in enumerate(collect_pod_nodes(tree)):
-            pod_id = f"{region}_{i}"
-            all_pod_nodes[pod_id] = pod_node
+    import random as _random
+    from simulate import (
+        simulate_bracket_with_temperature,
+        expected_score_for_pick,
+        compute_bracket_diversity,
+    )
+    import config as _cfg
 
-    combos, combo_probs = enumerate_pod_combos(trees, global_probs, top_k_per_pod)
-    selected_combos = select_diverse_combos(combos, combo_probs, n_brackets, diversity_weight)
-    
+    if n_champions is None:
+        n_champions = _cfg.BRACKET_N_CHAMPIONS
+    if temperature_tiers is None:
+        temperature_tiers = list(_cfg.BRACKET_TEMPERATURE_TIERS)
+
+    root, trees = build_full_tree(region_matchups, final_four_matchups)
+    global_probs = compute_all_path_probs_tree(root, cache)
+
     upset_premiums = compute_upset_premiums(region_matchups, global_probs, cache)
-    
-    out_brackets = []
-    for i, combo in enumerate(selected_combos):
-        b = evaluate_pod_combo_and_build(
-            combo, all_pod_nodes, trees, root, global_probs,
-            region_matchups, final_four_matchups, all_teams_by_name
+
+    champ_probs = sorted(
+        global_probs.items(),
+        key=lambda x: x[1].get(6, 0),
+        reverse=True,
+    )
+    top_champions = [name for name, _ in champ_probs[:n_champions]]
+
+    print(f"  Top {n_champions} champion candidates:")
+    for name in top_champions:
+        p = global_probs[name].get(6, 0)
+        print(f"    {name}: {p:.1%}")
+    print(f"  Temperature tiers: {temperature_tiers}")
+    print(f"  Candidates per cell: {candidates_per_cell}")
+
+    grid_size = n_champions * len(temperature_tiers)
+    total_candidates = grid_size * candidates_per_cell
+    print(f"  Grid: {n_champions} champions x {len(temperature_tiers)} temps = {grid_size} brackets from {total_candidates} candidates")
+
+    out_brackets: list['Bracket'] = []
+    for champ in top_champions:
+        region_alts = _get_regional_alternatives(
+            region_matchups, global_probs, champ
         )
-        b.strategy_name = f"Analytical B{i+1}"
-        # Summarize forced picks by region for notes
-        for region in trees:
-            pod_winners = [combo[f"{region}_{j}"] for j in range(4) if f"{region}_{j}" in combo]
-            b.notes.append(f"Forced S16 ({region}): {', '.join(pod_winners)}")
-        out_brackets.append(b)
-        
-    from simulate import compute_bracket_diversity
+
+        for temp_idx, temp in enumerate(temperature_tiers):
+            forced_regionals: Dict[str, str] = {}
+            if temp_idx > 0 and region_alts:
+                alt_regions = list(region_alts.keys())
+                for i in range(min(temp_idx, len(alt_regions))):
+                    region = alt_regions[i]
+                    alts = region_alts[region]
+                    if len(alts) >= 2:
+                        forced_regionals[region] = alts[1]
+
+            best_bracket = None
+            best_ev = -1.0
+            for seed_idx in range(candidates_per_cell):
+                champ_hash = int(hashlib.md5(champ.encode()).hexdigest(), 16) % 10000
+                rng = _random.Random(seed_idx * 7919 + champ_hash + temp_idx * 3571)
+                candidate = simulate_bracket_with_temperature(
+                    region_matchups, final_four_matchups, cache,
+                    temperature=temp, rng=rng,
+                    forced_champion=champ,
+                    forced_regional_winners=forced_regionals if forced_regionals else None,
+                )
+                ev = sum(
+                    expected_score_for_pick(team, r, global_probs)
+                    for r, teams in candidate.picks.items()
+                    for team in teams
+                )
+                if ev > best_ev:
+                    best_ev = ev
+                    best_bracket = candidate
+
+            best_bracket.expected_score = best_ev
+            f4_note = ""
+            if forced_regionals:
+                forced_list = [f"{r}: {t}" for r, t in forced_regionals.items()]
+                f4_note = f" | F4 forced: {', '.join(forced_list)}"
+            best_bracket.strategy_name = f"{champ} (T={temp})"
+            champ_p = global_probs[champ].get(6, 0)
+            best_bracket.notes = [
+                f"Champion: {champ} (P={champ_p:.1%})",
+                f"Temperature: {temp}{f4_note}",
+                f"Best of {candidates_per_cell} candidates (EV={best_ev:.1f})",
+            ]
+            out_brackets.append(best_bracket)
+
+    if len(out_brackets) > n_brackets:
+        out_brackets = out_brackets[:n_brackets]
+
     diversity = compute_bracket_diversity(out_brackets)
-    
+
     report = {
         'path_probs': global_probs,
         'upset_premiums': upset_premiums,
-        'final_four_combos': combos,
-        'selected_combos': selected_combos,
-        'diversity_matrix': diversity
+        'diversity_matrix': diversity,
+        'top_champions': top_champions,
+        'temperature_tiers': temperature_tiers,
     }
-    
+
     return out_brackets, report

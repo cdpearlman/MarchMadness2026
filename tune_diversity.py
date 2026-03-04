@@ -7,10 +7,10 @@ import simulate
 
 def main():
     stats = data_prep.load_team_stats()
-    models, scaler = predict.load_models()
-    # Ensure SeedNum is not in features
+    models, scaler, calibrators = predict.load_models()
     predict.config.FEATURES = [f for f in predict.config.FEATURES if f != "SeedNum"]
-    cache = simulate.MatchupCache(models, scaler, predict.config.FEATURES)
+    cache = simulate.MatchupCache(models, scaler, predict.config.FEATURES,
+                                  calibrators=calibrators)
     
     bracket_data = simulate.load_bracket_file('data/bracket_2025.json')
     region_matchups, final_four_matchups, all_teams_by_name = simulate.build_region_matchups_from_file(bracket_data, stats, 2025)

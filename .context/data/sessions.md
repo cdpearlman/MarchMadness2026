@@ -62,3 +62,49 @@
 - MatchupCache uses `win_prob_a_logistic` but RF was best performer — consider switching to ensemble or RF
 - Consider increasing `top_k_per_pod` beyond 2 for more combinatorial diversity
 - Model hyperparameter tuning still pending
+
+## 2026-03-03 — Bracket Diversity Overhaul (Champion x Temperature Stratified Sampling)
+**Area**: Bracket engine (`bracket_engine.py`, `simulate.py`, `config.py`)
+**Work done**:
+- Replaced pod-level-only diversity system with champion x temperature stratified sampling architecture
+- Added `forced_champion` parameter to `simulate_bracket_with_temperature` — forces champion through every matchup on their path, samples all other games with temperature-adjusted coin flips
+- Refactored `run_analytical()` to use new pipeline: select top N champions by P(championship), then for each (champion, temp) cell generate K candidates and keep best by EV
+- Added config params: `BRACKET_N_CHAMPIONS`, `BRACKET_TEMPERATURE_TIERS`, `BRACKET_CANDIDATES_PER_CELL`
+- Added CLI flags: `--n-champions`, `--temperatures`, `--candidates-per-cell`
+- Ran two rounds of diversity experiments (10 configs total) to tune parameters
+- Old pod-based functions left in `bracket_engine.py` but no longer called
+**Results**: Mean overlap dropped from 69.7% (K=100) to 56.8% (final config). 5 unique champions, 5 unique F4 configs, 6 unique E8 configs across 15 brackets. EV range 73.4-104.5.
+**Final config**: `BRACKET_TEMPERATURE_TIERS = [0.4, 0.9, 1.6]`, `BRACKET_CANDIDATES_PER_CELL = 12`, `BRACKET_N_CHAMPIONS = 5`
+**Decisions made**: Champion x temperature grid over pod-level diversity; sampling over deterministic EV; stratified selection over unconstrained
+**Open threads**:
+- MatchupCache still uses `win_prob_a_logistic` — consider switching to ensemble or RF (RF was best performer)
+- Model hyperparameter tuning still pending
+- E8 convergence within same-champion brackets remains — could explore forced F4 diversity as future enhancement
+
+## 2026-03-03 — Pipeline Audit & Model Improvements
+**Area**: Full pipeline evaluation, model layer, bracket engine
+**Work done**:
+- Comprehensive evaluation of pipeline vs state-of-the-art March Madness prediction (FiveThirtyEight, KenPom log5, Kaggle winners, academic papers on bracket pool optimization)
+- **Fixed MatchupCache**: switched from `win_prob_a_logistic` to `win_prob_a_ensemble` in `simulate.py` (logistic was the worst model; ensemble is now best)
+- **Optimized ensemble weights via LOSO CV**: scipy.optimize found [0.5139, 0.0, 0.4861] — XGBoost gets zero weight. Ensemble log-loss improved from 0.5723 to 0.5608, now the best model overall
+- **Added probability calibration**: isotonic regression on LOSO OOF predictions, stored in pkl alongside models. Further improved ensemble log-loss from 0.5610 to 0.5515. Calibrators flow through predict_matchup -> MatchupCache -> bracket engine
+- **Fixed non-deterministic RNG**: replaced `hash(champ)` with `hashlib.md5()` in bracket_engine.py for reproducible bracket generation
+- **Added F4 diversity**: `run_analytical()` now forces alternative regional winners at higher temperature tiers. For each champion, temp_idx=1 forces the #2 team in one non-champion region, temp_idx=2 forces #2 in two regions
+- **Built backtesting framework** (`src/backtest.py`): game-level LOSO comparison of model vs seed-only baseline
+- **Regenerated SHAP importance CSV** with current Barttorvik feature names
+- Removed deprecated `use_label_encoder` from XGBoost params
+- Updated `load_models()`/`save_models()` to 3-tuple (models, scaler, calibrators) across predict.py, simulate.py, tune_diversity.py
+**Results**:
+- LOSO CV: ensemble 0.5608 LL, 70.0% acc, 0.778 AUC (best model). RF 0.5644, Logistic 0.5650, XGBoost 0.6063
+- Calibration: additional 0.0095 LL improvement
+- Bracket diversity: 55.5% mean overlap (down from 63%), 41.6% min overlap, F4 compositions now vary within same champion
+- SHAP top-5: diff_adj_em, diff_adj_d, diff_ft_pct, diff_oreb_rate, diff_adj_o. Seed NOT in top-10
+- Backtest: model accuracy 69.9% vs seed baseline 72.6% — model trails on raw picks but provides calibrated probabilities
+**Decisions made**: Ensemble weights optimized; XGBoost zeroed out; calibration added; MatchupCache switched to ensemble
+**Open threads**:
+- **Contrarian/public-pick integration**: The biggest strategic gap. Model optimizes EV but doesn't account for what other pool participants pick. Public pick data from ESPN/CBS could add a leverage axis
+- **Model vs seed accuracy gap**: Model trails seed on raw game picks (69.9% vs 72.6%). Its value is in probability calibration, not binary accuracy. Need to investigate whether additional features (SOS, preseason rankings, Vegas lines) could close this gap
+- **Bracket files for backtesting**: Only have bracket_2025.json. Need bracket files for past seasons to do proper bracket-level backtest scoring
+- **Hyperparameter tuning**: Still not done for any of the three models
+- **Preseason rankings as a feature**: FiveThirtyEight uses AP/coaches poll as 25% of signal. Available historically, free, could help
+- 2026 bracket file needed after Selection Sunday (March 15)

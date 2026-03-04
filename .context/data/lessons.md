@@ -55,3 +55,21 @@
 **Root cause**: No alias layer between bracket file names and data source names. Partial matching by substring is unreliable when short names are substrings of longer ones.
 **Fix**: Added `bracket_aliases` dict for known mismatches. Improved partial matching to prefer closest-length match.
 **Rule going forward**: When adding a new season's `bracket_YYYY.json`, test name matching first — run `build_region_matchups_from_file()` and check for "No stats found" warnings before running the full pipeline.
+
+## 2026-03-03 — Best-of-K selection kills sampling diversity
+**What happened**: With K=100 candidates per (champion, temperature) cell, the "best by EV" selection always converged to near-chalk brackets even at high temperatures. Mean overlap was 69.7% despite temperature spread. The E8 picks were identical across 12/15 brackets.
+**Root cause**: Maximizing expected score is equivalent to "find the most chalk-like bracket that still respects the temperature." With 100 samples, there's always one lucky draw where every close game went to the favorite. This undoes the diversity that sampling was supposed to provide.
+**Fix**: Reduced K from 100 to 12. Still filters true garbage (random upsets that are incoherent) but doesn't have enough samples to over-optimize toward chalk.
+**Rule going forward**: When using "generate many, select best" in a diversity-sensitive context, keep K low (10-20). The selection step is an adversary to diversity — it must be balanced against the need for quality filtering.
+
+## 2026-03-03 — Model trails seed baseline on raw game-by-game accuracy
+**What happened**: Game-level LOSO backtest showed model accuracy (69.9%) is slightly below seed-only baseline (72.6%). Model only beats seed in 4 of 16 seasons. Net: -29 games across 1,062.
+**Root cause**: Seed is an extremely efficient predictor for lopsided matchups (1v16, 2v15). The model's value is not in binary picks but in probability calibration — knowing that a 5v12 game is 62/38 rather than just "pick the 5 seed." The bracket optimizer needs calibrated probabilities, not just binary picks.
+**Implication**: The model IS adding value through probability calibration (log-loss 0.5618 on calibrated ensemble), but we should not expect it to beat seed on raw accuracy. The real test is bracket scoring against actual tournament outcomes, not game-by-game accuracy.
+**Rule going forward**: Evaluate model quality by log-loss and bracket-level scoring, not game-by-game accuracy. Raw accuracy is dominated by easy matchups where seed and model agree. The model's edge is in close games and probability gradation.
+
+## 2026-03-03 — MatchupCache was silently using the worst model
+**What happened**: MatchupCache in simulate.py used `win_prob_a_logistic` with a comment saying "use best single model." But logistic had the worst log-loss of the three models. Every bracket was generated using degraded probabilities.
+**Root cause**: The comment was written when the code was first created and never updated when model evaluation results came in. No validation step checked which model the cache was actually using.
+**Fix**: Switched to `win_prob_a_ensemble` with optimized weights. Also added calibration.
+**Rule going forward**: When a component depends on "the best model," verify which model that actually is after every retraining. Don't trust stale comments. The MatchupCache model choice should be a config parameter, not a hardcoded string.

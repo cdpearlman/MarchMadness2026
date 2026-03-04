@@ -3,29 +3,123 @@
   "n_sims": 10000,
   "diversity": {
     "pairwise": {
-      "B1_vs_B2": 0.34,
-      "B1_vs_B3": 0.969,
+      "B1_vs_B2": 0.575,
+      "B1_vs_B3": 0.518,
       "B1_vs_B4": 0.8,
-      "B1_vs_B5": 0.8,
-      "B2_vs_B3": 0.355,
-      "B2_vs_B4": 0.432,
-      "B2_vs_B5": 0.416,
-      "B3_vs_B4": 0.775,
-      "B3_vs_B5": 0.775,
-      "B4_vs_B5": 0.636
+      "B1_vs_B5": 0.556,
+      "B1_vs_B6": 0.518,
+      "B1_vs_B7": 0.575,
+      "B1_vs_B8": 0.556,
+      "B1_vs_B9": 0.518,
+      "B1_vs_B10": 0.726,
+      "B1_vs_B11": 0.595,
+      "B1_vs_B12": 0.518,
+      "B1_vs_B13": 0.658,
+      "B1_vs_B14": 0.575,
+      "B1_vs_B15": 0.482,
+      "B2_vs_B3": 0.658,
+      "B2_vs_B4": 0.556,
+      "B2_vs_B5": 0.518,
+      "B2_vs_B6": 0.5,
+      "B2_vs_B7": 0.68,
+      "B2_vs_B8": 0.518,
+      "B2_vs_B9": 0.556,
+      "B2_vs_B10": 0.575,
+      "B2_vs_B11": 0.5,
+      "B2_vs_B12": 0.595,
+      "B2_vs_B13": 0.518,
+      "B2_vs_B14": 0.575,
+      "B2_vs_B15": 0.448,
+      "B3_vs_B4": 0.615,
+      "B3_vs_B5": 0.575,
+      "B3_vs_B6": 0.537,
+      "B3_vs_B7": 0.575,
+      "B3_vs_B8": 0.416,
+      "B3_vs_B9": 0.5,
+      "B3_vs_B10": 0.556,
+      "B3_vs_B11": 0.448,
+      "B3_vs_B12": 0.537,
+      "B3_vs_B13": 0.518,
+      "B3_vs_B14": 0.5,
+      "B3_vs_B15": 0.432,
+      "B4_vs_B5": 0.615,
+      "B4_vs_B6": 0.575,
+      "B4_vs_B7": 0.615,
+      "B4_vs_B8": 0.482,
+      "B4_vs_B9": 0.5,
+      "B4_vs_B10": 0.68,
+      "B4_vs_B11": 0.556,
+      "B4_vs_B12": 0.537,
+      "B4_vs_B13": 0.636,
+      "B4_vs_B14": 0.537,
+      "B4_vs_B15": 0.448,
+      "B5_vs_B6": 0.575,
+      "B5_vs_B7": 0.556,
+      "B5_vs_B8": 0.556,
+      "B5_vs_B9": 0.556,
+      "B5_vs_B10": 0.595,
+      "B5_vs_B11": 0.556,
+      "B5_vs_B12": 0.518,
+      "B5_vs_B13": 0.575,
+      "B5_vs_B14": 0.556,
+      "B5_vs_B15": 0.448,
+      "B6_vs_B7": 0.518,
+      "B6_vs_B8": 0.556,
+      "B6_vs_B9": 0.556,
+      "B6_vs_B10": 0.556,
+      "B6_vs_B11": 0.482,
+      "B6_vs_B12": 0.636,
+      "B6_vs_B13": 0.537,
+      "B6_vs_B14": 0.518,
+      "B6_vs_B15": 0.575,
+      "B7_vs_B8": 0.595,
+      "B7_vs_B9": 0.537,
+      "B7_vs_B10": 0.636,
+      "B7_vs_B11": 0.556,
+      "B7_vs_B12": 0.537,
+      "B7_vs_B13": 0.615,
+      "B7_vs_B14": 0.595,
+      "B7_vs_B15": 0.448,
+      "B8_vs_B9": 0.575,
+      "B8_vs_B10": 0.658,
+      "B8_vs_B11": 0.537,
+      "B8_vs_B12": 0.556,
+      "B8_vs_B13": 0.556,
+      "B8_vs_B14": 0.595,
+      "B8_vs_B15": 0.465,
+      "B9_vs_B10": 0.556,
+      "B9_vs_B11": 0.5,
+      "B9_vs_B12": 0.482,
+      "B9_vs_B13": 0.465,
+      "B9_vs_B14": 0.518,
+      "B9_vs_B15": 0.448,
+      "B10_vs_B11": 0.595,
+      "B10_vs_B12": 0.556,
+      "B10_vs_B13": 0.575,
+      "B10_vs_B14": 0.615,
+      "B10_vs_B15": 0.5,
+      "B11_vs_B12": 0.595,
+      "B11_vs_B13": 0.658,
+      "B11_vs_B14": 0.575,
+      "B11_vs_B15": 0.5,
+      "B12_vs_B13": 0.575,
+      "B12_vs_B14": 0.615,
+      "B12_vs_B15": 0.537,
+      "B13_vs_B14": 0.636,
+      "B13_vs_B15": 0.556,
+      "B14_vs_B15": 0.556
     },
-    "mean_overlap": 0.63,
-    "min_overlap": 0.34
+    "mean_overlap": 0.555,
+    "min_overlap": 0.416
   },
   "brackets": [
     {
-      "strategy": "Analytical B1",
-      "expected_score": 105.83,
+      "strategy": "Auburn (T=0.4)",
+      "expected_score": 91.72,
       "notes": [
-        "Forced S16 (South): Auburn, Texas A&M, Michigan State, Iowa State",
-        "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Arizona, Alabama, Wisconsin",
-        "Forced S16 (Midwest): Houston, Purdue, Tennessee, Kentucky"
+        "Champion: Auburn (P=20.8%)",
+        "Temperature: 0.4",
+        "Best of 12 candidates (EV=91.7)"
       ],
       "picks": {
         "1": [
@@ -38,8 +132,266 @@
           "Iowa State",
           "Marquette",
           "Florida",
-          "UConn",
+          "Oklahoma",
           "Colorado State",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Kansas",
+          "Duke",
+          "Baylor",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "BYU",
+          "Wisconsin",
+          "Vanderbilt",
+          "Houston",
+          "Georgia",
+          "Clemson",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Marquette",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "Clemson",
+          "Tennessee",
+          "Kentucky"
+        ],
+        "3": [
+          "Auburn",
+          "Michigan State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Auburn",
+          "Florida",
+          "Duke",
+          "Houston"
+        ],
+        "5": [
+          "Auburn",
+          "Duke"
+        ],
+        "6": [
+          "Auburn"
+        ]
+      }
+    },
+    {
+      "strategy": "Auburn (T=0.9)",
+      "expected_score": 87.45,
+      "notes": [
+        "Champion: Auburn (P=20.8%)",
+        "Temperature: 0.9 | F4 forced: West: Texas Tech",
+        "Best of 12 candidates (EV=87.5)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "North Carolina",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "UConn",
+          "Memphis",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Arkansas",
+          "Duke",
+          "Mississippi State",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "BYU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "McNeese",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Troy",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "Missouri",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Saint Mary's",
+          "Houston",
+          "Purdue",
+          "Tennessee",
+          "UCLA"
+        ],
+        "3": [
+          "Auburn",
+          "Michigan State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "UCLA"
+        ],
+        "4": [
+          "Auburn",
+          "Texas Tech",
+          "Duke",
+          "Houston"
+        ],
+        "5": [
+          "Auburn",
+          "Duke"
+        ],
+        "6": [
+          "Auburn"
+        ]
+      }
+    },
+    {
+      "strategy": "Auburn (T=1.6)",
+      "expected_score": 85.02,
+      "notes": [
+        "Champion: Auburn (P=20.8%)",
+        "Temperature: 1.6 | F4 forced: West: Texas Tech, East: Alabama",
+        "Best of 12 candidates (EV=85.0)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "UConn",
+          "Memphis",
+          "Grand Canyon",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Kansas",
+          "Duke",
+          "Mississippi State",
+          "Oregon",
+          "Arizona",
+          "Alabama",
+          "BYU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "Clemson",
+          "Purdue",
+          "Tennessee",
+          "Xavier",
+          "Troy",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Grand Canyon",
+          "Missouri",
+          "Texas Tech",
+          "Duke",
+          "Oregon",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "Purdue",
+          "Tennessee",
+          "UCLA"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Auburn",
+          "Texas Tech",
+          "Alabama",
+          "Houston"
+        ],
+        "5": [
+          "Auburn",
+          "Houston"
+        ],
+        "6": [
+          "Auburn"
+        ]
+      }
+    },
+    {
+      "strategy": "Houston (T=0.4)",
+      "expected_score": 92.52,
+      "notes": [
+        "Champion: Houston (P=19.8%)",
+        "Temperature: 0.4",
+        "Best of 12 candidates (EV=92.5)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Louisville",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "Oklahoma",
+          "Memphis",
           "Maryland",
           "St. John's",
           "Missouri",
@@ -52,13 +404,13 @@
           "Alabama",
           "BYU",
           "Wisconsin",
-          "Saint Mary's",
+          "Vanderbilt",
           "Houston",
           "Gonzaga",
           "Clemson",
           "Purdue",
           "Tennessee",
-          "Illinois",
+          "Xavier",
           "Kentucky",
           "UCLA"
         ],
@@ -66,7 +418,7 @@
           "Auburn",
           "Texas A&M",
           "Michigan State",
-          "Iowa State",
+          "Marquette",
           "Florida",
           "Maryland",
           "St. John's",
@@ -82,7 +434,7 @@
         ],
         "3": [
           "Auburn",
-          "Iowa State",
+          "Michigan State",
           "Florida",
           "Texas Tech",
           "Duke",
@@ -106,30 +458,29 @@
       }
     },
     {
-      "strategy": "Analytical B2",
-      "expected_score": 38.23,
+      "strategy": "Houston (T=0.9)",
+      "expected_score": 80.66,
       "notes": [
-        "Forced S16 (South): Louisville, Michigan, Ole Miss, Marquette",
-        "Forced S16 (West): UConn, Colorado State, Missouri, Kansas",
-        "Forced S16 (East): Baylor, Oregon, BYU, Saint Mary's",
-        "Forced S16 (Midwest): Gonzaga, Clemson, Illinois, UCLA"
+        "Champion: Houston (P=19.8%)",
+        "Temperature: 0.9 | F4 forced: South: Iowa State",
+        "Best of 12 candidates (EV=80.7)"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Louisville",
+          "Creighton",
           "Michigan",
           "Texas A&M",
           "Michigan State",
-          "Ole Miss",
+          "North Carolina",
           "Iowa State",
-          "Marquette",
+          "New Mexico",
           "Florida",
           "UConn",
-          "Colorado State",
+          "Memphis",
           "Maryland",
           "St. John's",
-          "Missouri",
+          "Drake",
           "Texas Tech",
           "Kansas",
           "Duke",
@@ -139,7 +490,7 @@
           "Alabama",
           "BYU",
           "Wisconsin",
-          "Saint Mary's",
+          "Vanderbilt",
           "Houston",
           "Gonzaga",
           "Clemson",
@@ -150,81 +501,80 @@
           "UCLA"
         ],
         "2": [
-          "Louisville",
-          "Michigan",
-          "Ole Miss",
-          "Marquette",
-          "UConn",
-          "Colorado State",
-          "Missouri",
-          "Kansas",
-          "Baylor",
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
           "Oregon",
-          "BYU",
-          "Saint Mary's",
-          "Gonzaga",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
           "Clemson",
-          "Illinois",
+          "Tennessee",
           "UCLA"
         ],
         "3": [
-          "Louisville",
-          "Marquette",
-          "UConn",
-          "Kansas",
-          "Oregon",
-          "Saint Mary's",
-          "Gonzaga",
-          "UCLA"
+          "Auburn",
+          "Iowa State",
+          "Maryland",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Tennessee"
         ],
         "4": [
-          "Marquette",
-          "Kansas",
-          "Saint Mary's",
-          "Gonzaga"
+          "Iowa State",
+          "Maryland",
+          "Duke",
+          "Houston"
         ],
         "5": [
-          "Kansas",
-          "Gonzaga"
+          "Iowa State",
+          "Houston"
         ],
         "6": [
-          "Gonzaga"
+          "Houston"
         ]
       }
     },
     {
-      "strategy": "Analytical B3",
-      "expected_score": 105.76,
+      "strategy": "Houston (T=1.6)",
+      "expected_score": 76.95,
       "notes": [
-        "Forced S16 (South): Auburn, Texas A&M, Michigan State, Iowa State",
-        "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Arizona, Alabama, Wisconsin",
-        "Forced S16 (Midwest): Houston, Purdue, Tennessee, UCLA"
+        "Champion: Houston (P=19.8%)",
+        "Temperature: 1.6 | F4 forced: South: Iowa State, West: Texas Tech",
+        "Best of 12 candidates (EV=77.0)"
       ],
       "picks": {
         "1": [
           "Auburn",
-          "Louisville",
+          "Creighton",
           "Michigan",
           "Texas A&M",
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "Marquette",
+          "New Mexico",
           "Florida",
-          "UConn",
+          "Oklahoma",
           "Colorado State",
           "Maryland",
           "St. John's",
           "Missouri",
           "Texas Tech",
-          "Kansas",
+          "Arkansas",
           "Duke",
           "Baylor",
           "Oregon",
           "Arizona",
           "Alabama",
-          "BYU",
+          "VCU",
           "Wisconsin",
           "Saint Mary's",
           "Houston",
@@ -239,6 +589,92 @@
         "2": [
           "Auburn",
           "Texas A&M",
+          "Ole Miss",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "Missouri",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "Purdue",
+          "Tennessee",
+          "Kentucky"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Arizona",
+          "Wisconsin",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Iowa State",
+          "Texas Tech",
+          "Arizona",
+          "Houston"
+        ],
+        "5": [
+          "Iowa State",
+          "Houston"
+        ],
+        "6": [
+          "Houston"
+        ]
+      }
+    },
+    {
+      "strategy": "Duke (T=0.4)",
+      "expected_score": 89.59,
+      "notes": [
+        "Champion: Duke (P=16.6%)",
+        "Temperature: 0.4",
+        "Best of 12 candidates (EV=89.6)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Louisville",
+          "UC San Diego",
+          "Texas A&M",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "New Mexico",
+          "Florida",
+          "UConn",
+          "Memphis",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Arkansas",
+          "Duke",
+          "Mississippi State",
+          "Oregon",
+          "Arizona",
+          "Alabama",
+          "BYU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "McNeese",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "UC San Diego",
           "Michigan State",
           "Iowa State",
           "Florida",
@@ -248,7 +684,7 @@
           "Duke",
           "Arizona",
           "Alabama",
-          "Wisconsin",
+          "Saint Mary's",
           "Houston",
           "Purdue",
           "Tennessee",
@@ -272,21 +708,192 @@
         ],
         "5": [
           "Auburn",
-          "Houston"
+          "Duke"
         ],
         "6": [
-          "Houston"
+          "Duke"
         ]
       }
     },
     {
-      "strategy": "Analytical B4",
-      "expected_score": 102.17,
+      "strategy": "Duke (T=0.9)",
+      "expected_score": 81.08,
       "notes": [
-        "Forced S16 (South): Auburn, Texas A&M, Michigan State, Marquette",
-        "Forced S16 (West): Florida, Maryland, Missouri, Kansas",
-        "Forced S16 (East): Duke, Arizona, Alabama, Saint Mary's",
-        "Forced S16 (Midwest): Houston, Clemson, Tennessee, Kentucky"
+        "Champion: Duke (P=16.6%)",
+        "Temperature: 0.9 | F4 forced: South: Iowa State",
+        "Best of 12 candidates (EV=81.1)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
+          "Michigan",
+          "Yale",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "New Mexico",
+          "Florida",
+          "UConn",
+          "Colorado State",
+          "Maryland",
+          "St. John's",
+          "Drake",
+          "Texas Tech",
+          "Arkansas",
+          "Duke",
+          "Baylor",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "VCU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "Clemson",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "Utah State"
+        ],
+        "2": [
+          "Auburn",
+          "Yale",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Saint Mary's",
+          "Houston",
+          "Clemson",
+          "Tennessee",
+          "Kentucky"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Kentucky"
+        ],
+        "4": [
+          "Iowa State",
+          "Florida",
+          "Duke",
+          "Houston"
+        ],
+        "5": [
+          "Florida",
+          "Duke"
+        ],
+        "6": [
+          "Duke"
+        ]
+      }
+    },
+    {
+      "strategy": "Duke (T=1.6)",
+      "expected_score": 76.76,
+      "notes": [
+        "Champion: Duke (P=16.6%)",
+        "Temperature: 1.6 | F4 forced: South: Iowa State, West: Texas Tech",
+        "Best of 12 candidates (EV=76.8)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Louisville",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "North Carolina",
+          "Iowa State",
+          "New Mexico",
+          "Florida",
+          "UConn",
+          "Colorado State",
+          "Maryland",
+          "St. John's",
+          "Drake",
+          "Texas Tech",
+          "Arkansas",
+          "Duke",
+          "Baylor",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "BYU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "Clemson",
+          "High Point",
+          "Tennessee",
+          "Xavier",
+          "Troy",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "Drake",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "High Point",
+          "Tennessee",
+          "Troy"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Wisconsin",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Iowa State",
+          "Texas Tech",
+          "Duke",
+          "Houston"
+        ],
+        "5": [
+          "Texas Tech",
+          "Duke"
+        ],
+        "6": [
+          "Duke"
+        ]
+      }
+    },
+    {
+      "strategy": "Florida (T=0.4)",
+      "expected_score": 86.88,
+      "notes": [
+        "Champion: Florida (P=9.4%)",
+        "Temperature: 0.4",
+        "Best of 12 candidates (EV=86.9)"
       ],
       "picks": {
         "1": [
@@ -297,7 +904,7 @@
           "Michigan State",
           "Ole Miss",
           "Iowa State",
-          "Marquette",
+          "New Mexico",
           "Florida",
           "UConn",
           "Colorado State",
@@ -307,8 +914,8 @@
           "Texas Tech",
           "Kansas",
           "Duke",
-          "Baylor",
-          "Oregon",
+          "Mississippi State",
+          "Liberty",
           "Arizona",
           "Alabama",
           "BYU",
@@ -321,21 +928,21 @@
           "Tennessee",
           "Illinois",
           "Kentucky",
-          "UCLA"
+          "Utah State"
         ],
         "2": [
           "Auburn",
           "Texas A&M",
           "Michigan State",
-          "Marquette",
+          "Iowa State",
           "Florida",
           "Maryland",
-          "Missouri",
-          "Kansas",
+          "St. John's",
+          "Texas Tech",
           "Duke",
           "Arizona",
           "Alabama",
-          "Saint Mary's",
+          "Wisconsin",
           "Houston",
           "Clemson",
           "Tennessee",
@@ -345,7 +952,7 @@
           "Auburn",
           "Michigan State",
           "Florida",
-          "Kansas",
+          "Texas Tech",
           "Duke",
           "Alabama",
           "Houston",
@@ -358,27 +965,284 @@
           "Houston"
         ],
         "5": [
-          "Auburn",
+          "Florida",
           "Houston"
         ],
         "6": [
-          "Houston"
+          "Florida"
         ]
       }
     },
     {
-      "strategy": "Analytical B5",
-      "expected_score": 99.64,
+      "strategy": "Florida (T=0.9)",
+      "expected_score": 78.78,
       "notes": [
-        "Forced S16 (South): Auburn, Michigan, Ole Miss, Iowa State",
-        "Forced S16 (West): Florida, Maryland, St. John's, Texas Tech",
-        "Forced S16 (East): Duke, Oregon, BYU, Wisconsin",
-        "Forced S16 (Midwest): Houston, Purdue, Illinois, Kentucky"
+        "Champion: Florida (P=9.4%)",
+        "Temperature: 0.9 | F4 forced: South: Iowa State",
+        "Best of 12 candidates (EV=78.8)"
       ],
       "picks": {
         "1": [
           "Auburn",
           "Louisville",
+          "UC San Diego",
+          "Texas A&M",
+          "Michigan State",
+          "North Carolina",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "Oklahoma",
+          "Memphis",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Kansas",
+          "Duke",
+          "Baylor",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "VCU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Georgia",
+          "Clemson",
+          "High Point",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Michigan State",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Saint Mary's",
+          "Houston",
+          "Clemson",
+          "Tennessee",
+          "UCLA"
+        ],
+        "3": [
+          "Texas A&M",
+          "Iowa State",
+          "Florida",
+          "St. John's",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Iowa State",
+          "Florida",
+          "Duke",
+          "Houston"
+        ],
+        "5": [
+          "Florida",
+          "Houston"
+        ],
+        "6": [
+          "Florida"
+        ]
+      }
+    },
+    {
+      "strategy": "Florida (T=1.6)",
+      "expected_score": 75.44,
+      "notes": [
+        "Champion: Florida (P=9.4%)",
+        "Temperature: 1.6 | F4 forced: South: Iowa State, East: Alabama",
+        "Best of 12 candidates (EV=75.4)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "Oklahoma",
+          "Memphis",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Arkansas",
+          "Duke",
+          "Baylor",
+          "Liberty",
+          "Arizona",
+          "Alabama",
+          "VCU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Gonzaga",
+          "McNeese",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Troy",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Ole Miss",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "McNeese",
+          "Tennessee",
+          "UCLA"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Arizona",
+          "Alabama",
+          "Houston",
+          "UCLA"
+        ],
+        "4": [
+          "Iowa State",
+          "Florida",
+          "Alabama",
+          "Houston"
+        ],
+        "5": [
+          "Florida",
+          "Houston"
+        ],
+        "6": [
+          "Florida"
+        ]
+      }
+    },
+    {
+      "strategy": "Tennessee (T=0.4)",
+      "expected_score": 81.5,
+      "notes": [
+        "Champion: Tennessee (P=5.2%)",
+        "Temperature: 0.4",
+        "Best of 12 candidates (EV=81.5)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Louisville",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "Ole Miss",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "Oklahoma",
+          "Memphis",
+          "Maryland",
+          "St. John's",
+          "Drake",
+          "Texas Tech",
+          "Kansas",
+          "Duke",
+          "Baylor",
+          "Oregon",
+          "Arizona",
+          "Alabama",
+          "VCU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Georgia",
+          "Clemson",
+          "Purdue",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "UCLA"
+        ],
+        "2": [
+          "Auburn",
+          "Texas A&M",
+          "Ole Miss",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Saint Mary's",
+          "Houston",
+          "Clemson",
+          "Tennessee",
+          "UCLA"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Duke",
+          "Alabama",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Auburn",
+          "Florida",
+          "Duke",
+          "Tennessee"
+        ],
+        "5": [
+          "Auburn",
+          "Tennessee"
+        ],
+        "6": [
+          "Tennessee"
+        ]
+      }
+    },
+    {
+      "strategy": "Tennessee (T=0.9)",
+      "expected_score": 74.52,
+      "notes": [
+        "Champion: Tennessee (P=5.2%)",
+        "Temperature: 0.9 | F4 forced: South: Iowa State",
+        "Best of 12 candidates (EV=74.5)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
           "Michigan",
           "Texas A&M",
           "Michigan State",
@@ -395,7 +1259,7 @@
           "Kansas",
           "Duke",
           "Baylor",
-          "Oregon",
+          "Liberty",
           "Arizona",
           "Alabama",
           "BYU",
@@ -403,7 +1267,7 @@
           "Saint Mary's",
           "Houston",
           "Gonzaga",
-          "Clemson",
+          "McNeese",
           "Purdue",
           "Tennessee",
           "Illinois",
@@ -412,21 +1276,21 @@
         ],
         "2": [
           "Auburn",
-          "Michigan",
-          "Ole Miss",
+          "Texas A&M",
+          "Michigan State",
           "Iowa State",
           "Florida",
           "Maryland",
           "St. John's",
           "Texas Tech",
           "Duke",
-          "Oregon",
+          "Arizona",
           "BYU",
-          "Wisconsin",
+          "Saint Mary's",
           "Houston",
-          "Purdue",
-          "Illinois",
-          "Kentucky"
+          "McNeese",
+          "Tennessee",
+          "UCLA"
         ],
         "3": [
           "Auburn",
@@ -434,22 +1298,108 @@
           "Florida",
           "Texas Tech",
           "Duke",
-          "Wisconsin",
+          "BYU",
           "Houston",
-          "Kentucky"
+          "Tennessee"
         ],
         "4": [
-          "Auburn",
+          "Iowa State",
           "Florida",
           "Duke",
-          "Houston"
+          "Tennessee"
         ],
         "5": [
-          "Auburn",
-          "Houston"
+          "Florida",
+          "Tennessee"
         ],
         "6": [
-          "Houston"
+          "Tennessee"
+        ]
+      }
+    },
+    {
+      "strategy": "Tennessee (T=1.6)",
+      "expected_score": 66.14,
+      "notes": [
+        "Champion: Tennessee (P=5.2%)",
+        "Temperature: 1.6 | F4 forced: South: Iowa State, West: Texas Tech",
+        "Best of 12 candidates (EV=66.1)"
+      ],
+      "picks": {
+        "1": [
+          "Auburn",
+          "Creighton",
+          "Michigan",
+          "Texas A&M",
+          "Michigan State",
+          "North Carolina",
+          "Iowa State",
+          "Marquette",
+          "Florida",
+          "Oklahoma",
+          "Colorado State",
+          "Maryland",
+          "St. John's",
+          "Missouri",
+          "Texas Tech",
+          "Kansas",
+          "Duke",
+          "Mississippi State",
+          "Oregon",
+          "Arizona",
+          "Alabama",
+          "VCU",
+          "Wisconsin",
+          "Saint Mary's",
+          "Houston",
+          "Georgia",
+          "McNeese",
+          "High Point",
+          "Tennessee",
+          "Illinois",
+          "Kentucky",
+          "Utah State"
+        ],
+        "2": [
+          "Auburn",
+          "Michigan",
+          "North Carolina",
+          "Iowa State",
+          "Florida",
+          "Maryland",
+          "St. John's",
+          "Texas Tech",
+          "Duke",
+          "Arizona",
+          "Alabama",
+          "Wisconsin",
+          "Houston",
+          "McNeese",
+          "Tennessee",
+          "Kentucky"
+        ],
+        "3": [
+          "Auburn",
+          "Iowa State",
+          "Florida",
+          "Texas Tech",
+          "Arizona",
+          "Alabama",
+          "Houston",
+          "Tennessee"
+        ],
+        "4": [
+          "Iowa State",
+          "Texas Tech",
+          "Arizona",
+          "Tennessee"
+        ],
+        "5": [
+          "Texas Tech",
+          "Tennessee"
+        ],
+        "6": [
+          "Tennessee"
         ]
       }
     }

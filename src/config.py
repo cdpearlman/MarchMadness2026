@@ -135,7 +135,6 @@ XGBOOST_PARAMS = dict(
     eval_metric="logloss",
     early_stopping_rounds=20,
     random_state=42,
-    use_label_encoder=False,
 )
 
 LOGISTIC_PARAMS = dict(
@@ -151,8 +150,8 @@ RANDOM_FOREST_PARAMS = dict(
     random_state=42,
 )
 
-# Ensemble weights (LogReg, XGBoost, RF) — will be optimised via CV
-ENSEMBLE_WEIGHTS = [0.30, 0.45, 0.25]
+# Ensemble weights (LogReg, XGBoost, RF) — optimized via LOSO CV log-loss
+ENSEMBLE_WEIGHTS = [0.5139, 0.0, 0.4861]
 
 # Seasons to include in training (Barttorvik data starts 2008)
 TRAIN_SEASONS = list(range(2008, 2026))  # 2008-2025 inclusive
@@ -161,3 +160,10 @@ TRAIN_SEASONS.remove(2020)
 
 # Physical features available for all Barttorvik seasons (2008+)
 PHYSICAL_FEATURE_START_SEASON = 2008
+
+# ---------------------------------------------------------------------------
+# Bracket generation (champion x temperature stratified sampling)
+# ---------------------------------------------------------------------------
+BRACKET_N_CHAMPIONS = 5
+BRACKET_TEMPERATURE_TIERS = [0.4, 0.9, 1.6]
+BRACKET_CANDIDATES_PER_CELL = 12

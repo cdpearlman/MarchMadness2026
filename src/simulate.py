@@ -113,10 +113,12 @@ class Bracket:
 class MatchupCache:
     """Caches win probability lookups to avoid repeated model calls."""
 
-    def __init__(self, models: dict, scaler, feature_cols: list[str]):
+    def __init__(self, models: dict, scaler, feature_cols: list[str],
+                 calibrators: dict | None = None):
         self.models = models
         self.scaler = scaler
         self.feature_cols = feature_cols
+        self.calibrators = calibrators
         self._cache: dict[tuple, float] = {}
 
     def win_prob(self, team_a: Team, team_b: Team) -> float:
@@ -125,9 +127,10 @@ class MatchupCache:
         if key not in self._cache:
             result = predict_matchup(
                 team_a.stats, team_b.stats,
-                self.models, self.scaler, self.feature_cols
+                self.models, self.scaler, self.feature_cols,
+                calibrators=self.calibrators,
             )
-            p = result["win_prob_a_logistic"]  # use best single model
+            p = result["win_prob_a_ensemble"]
             self._cache[key] = p
             self._cache[(team_b.name, team_a.name)] = 1.0 - p
         return self._cache[key]
@@ -325,15 +328,17 @@ def simulate_bracket_with_temperature(
     rng: random.Random,
     forced_round1_winners: Optional[dict[str, str]] = None,
     upset_team_boost: float = 0.3,
+    forced_champion: Optional[str] = None,
+    forced_regional_winners: Optional[dict[str, str]] = None,
 ) -> Bracket:
     """
     Generate a bracket by simulating game-by-game in bracket order.
     Each matchup's winner is sampled from a temperature-adjusted probability.
 
-    temperature=0.0 → always pick the favourite (greedy)
-    temperature=0.5 → moderate upset friendliness
-    temperature=1.0 → pure model probability
-    temperature=1.5 → heavy chaos
+    temperature=0.0 -> always pick the favourite (greedy)
+    temperature=0.5 -> moderate upset friendliness
+    temperature=1.0 -> pure model probability
+    temperature=1.5 -> heavy chaos
 
     forced_round1_winners: dict mapping loser_name -> winner_name for
     specific round-1 upsets to force (e.g. {"Memphis": "Colorado State"}).
@@ -341,22 +346,34 @@ def simulate_bracket_with_temperature(
     upset_team_boost: when a forced upset team plays in later rounds, add this
     to their win probability before temperature adjustment (capped at 0.95).
     Ensures the Cinderella team has a real chance to keep advancing.
+
+    forced_champion: team name that MUST win every matchup on their path
+    through the bracket (R1 through championship). All other matchups are
+    sampled normally with temperature.
+
+    forced_regional_winners: dict mapping region_name -> team_name. The
+    specified team MUST win every matchup within their region (like
+    forced_champion but region-scoped). Used for F4 diversity.
     """
     bracket = Bracket()
     region_champions: dict[str, Team] = {}
     forced = forced_round1_winners or {}
-    # Track which teams are "riding hot" (forced upset winners)
     hot_teams: set[str] = set(forced.values())
+    forced_regionals = forced_regional_winners or {}
 
     for region, matchups in region_matchups.items():
         current_round_pairs = list(matchups)
+        region_forced = forced_regionals.get(region)
 
         for round_num in range(1, 5):
             round_winners: list[Team] = []
 
             for team_a, team_b in current_round_pairs:
-                # Force round-1 upsets by key=loser, value=winner
-                if round_num == 1 and team_a.name in forced:
+                if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
+                    winner = team_a if team_a.name == forced_champion else team_b
+                elif region_forced and (team_a.name == region_forced or team_b.name == region_forced):
+                    winner = team_a if team_a.name == region_forced else team_b
+                elif round_num == 1 and team_a.name in forced:
                     winner_name = forced[team_a.name]
                     winner = team_a if team_a.name == winner_name else team_b
                 elif round_num == 1 and team_b.name in forced:
@@ -364,7 +381,6 @@ def simulate_bracket_with_temperature(
                     winner = team_b if team_b.name == winner_name else team_a
                 else:
                     p_raw = cache.win_prob(team_a, team_b)
-                    # Boost a hot (upset) team's probability in later rounds
                     if team_a.name in hot_teams:
                         p_raw = min(p_raw + upset_team_boost, 0.95)
                     elif team_b.name in hot_teams:
@@ -390,6 +406,25 @@ def simulate_bracket_with_temperature(
         team_a = region_champions.get(region_a)
         team_b = region_champions.get(region_b)
         if team_a and team_b:
+            if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
+                winner = team_a if team_a.name == forced_champion else team_b
+            else:
+                p_raw = cache.win_prob(team_a, team_b)
+                if team_a.name in hot_teams:
+                    p_raw = min(p_raw + upset_team_boost, 0.95)
+                elif team_b.name in hot_teams:
+                    p_raw = max(p_raw - upset_team_boost, 0.05)
+                p_adj = apply_temperature(p_raw, temperature)
+                winner = team_a if rng.random() < p_adj else team_b
+            final_four_teams.append(winner)
+            bracket.picks[5].append(winner.name)
+
+    # Championship (round 6)
+    if len(final_four_teams) == 2:
+        team_a, team_b = final_four_teams
+        if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
+            winner = team_a if team_a.name == forced_champion else team_b
+        else:
             p_raw = cache.win_prob(team_a, team_b)
             if team_a.name in hot_teams:
                 p_raw = min(p_raw + upset_team_boost, 0.95)
@@ -397,19 +432,6 @@ def simulate_bracket_with_temperature(
                 p_raw = max(p_raw - upset_team_boost, 0.05)
             p_adj = apply_temperature(p_raw, temperature)
             winner = team_a if rng.random() < p_adj else team_b
-            final_four_teams.append(winner)
-            bracket.picks[5].append(winner.name)
-
-    # Championship (round 6)
-    if len(final_four_teams) == 2:
-        team_a, team_b = final_four_teams
-        p_raw = cache.win_prob(team_a, team_b)
-        if team_a.name in hot_teams:
-            p_raw = min(p_raw + upset_team_boost, 0.95)
-        elif team_b.name in hot_teams:
-            p_raw = max(p_raw - upset_team_boost, 0.05)
-        p_adj = apply_temperature(p_raw, temperature)
-        winner = team_a if rng.random() < p_adj else team_b
         bracket.picks[6].append(winner.name)
 
     return bracket
@@ -1025,19 +1047,20 @@ def build_region_matchups_from_stats(
 def run(
     season: int,
     n_sims: int = 10000,
-    n_brackets: int = 5,
+    n_brackets: int = 15,
     retrain: bool = False,
     bracket_file: Optional[str] = None,
     output_dir: Optional[Path] = None,
     no_sim: bool = False,
 ) -> list[Bracket]:
-    """Full pipeline: load models → build bracket → simulate → generate brackets."""
+    """Full pipeline: load models -> build bracket -> simulate -> generate brackets."""
 
     # Load or train models
     model_file = config.PROJECT_ROOT / "models" / "trained_models.pkl"
+    calibrators = None
     if model_file.exists() and not retrain:
         print("Loading trained models...")
-        models, scaler = load_models()
+        models, scaler, calibrators = load_models()
     else:
         print("Training models...")
         from data_prep import build_training_data
@@ -1048,7 +1071,7 @@ def run(
 
     stats = load_team_stats()
     feature_cols = config.FEATURES + ["SeedNum"]
-    cache = MatchupCache(models, scaler, feature_cols)
+    cache = MatchupCache(models, scaler, feature_cols, calibrators=calibrators)
 
     print(f"\nBuilding bracket structure for season {season}...")
     if bracket_file:
@@ -1076,10 +1099,13 @@ def run(
         print(f"  {region}: {len(matchups)} first-round games")
 
     from bracket_engine import run_analytical
-    print(f"\nRunning Analytical Bracket generation...")
+    print(f"\nRunning Stratified Champion x Temperature Bracket generation...")
     brackets, analysis_report = run_analytical(
         season, region_matchups, final_four_matchups, all_teams_by_name, cache,
-        n_brackets=n_brackets
+        n_brackets=n_brackets,
+        n_champions=config.BRACKET_N_CHAMPIONS,
+        temperature_tiers=config.BRACKET_TEMPERATURE_TIERS,
+        candidates_per_cell=config.BRACKET_CANDIDATES_PER_CELL,
     )
 
     print(f"\n{'='*75}")
@@ -1158,8 +1184,14 @@ def main():
                         help="Season to simulate (default: latest in dataset)")
     parser.add_argument("--n-sims", type=int, default=10000,
                         help="Number of Monte Carlo simulations (default: 10000)")
-    parser.add_argument("--n-brackets", type=int, default=5,
-                        help="Number of brackets to generate (default: 5)")
+    parser.add_argument("--n-brackets", type=int, default=15,
+                        help="Max brackets to output (default: 15)")
+    parser.add_argument("--n-champions", type=int, default=None,
+                        help="Number of top champion candidates (default: from config)")
+    parser.add_argument("--temperatures", type=float, nargs="+", default=None,
+                        help="Temperature tiers (default: from config)")
+    parser.add_argument("--candidates-per-cell", type=int, default=None,
+                        help="Candidates per (champion, temp) cell (default: from config)")
     parser.add_argument("--retrain", action="store_true",
                         help="Force model retraining")
     parser.add_argument("--bracket-file", type=str, default=None,
@@ -1168,10 +1200,16 @@ def main():
                         help="Skip Monte Carlo simulation and run pure analytical backend")
     args = parser.parse_args()
 
+    if args.n_champions is not None:
+        config.BRACKET_N_CHAMPIONS = args.n_champions
+    if args.temperatures is not None:
+        config.BRACKET_TEMPERATURE_TIERS = args.temperatures
+    if args.candidates_per_cell is not None:
+        config.BRACKET_CANDIDATES_PER_CELL = args.candidates_per_cell
+
     stats = load_team_stats()
     season = args.season or int(stats[config.STATS_SEASON_COL].max())
 
-    # Auto-detect bracket file if not specified
     bracket_file = args.bracket_file
     if not bracket_file:
         default = config.PROJECT_ROOT / "data" / f"bracket_{season}.json"

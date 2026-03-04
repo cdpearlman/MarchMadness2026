@@ -44,6 +44,7 @@ def predict_matchup(
     models: dict,
     scaler,
     feature_cols: list[str],
+    calibrators: dict | None = None,
 ) -> dict:
     """
     Predict the outcome of a single matchup.
@@ -52,9 +53,8 @@ def predict_matchup(
       - team_a_name, team_b_name
       - team_a_seed, team_b_seed
       - win_prob_a: probability Team A wins
-      - individual model probabilities
+      - individual model probabilities (calibrated if calibrators provided)
     """
-    # Build a single-row DataFrame with A_ and B_ columns
     row = {}
     for col in feature_cols:
         row[f"A_{col}"] = team_a.get(col, np.nan)
@@ -62,7 +62,6 @@ def predict_matchup(
 
     row_df = pd.DataFrame([row])
 
-    # Same pipeline as training: differentials → handle missing
     diff_df = pd.DataFrame()
     for col in feature_cols:
         a_col = f"A_{col}"
@@ -74,27 +73,29 @@ def predict_matchup(
 
     diff_df = diff_df.fillna(0.0)
 
-    # Ensure column order matches training
     X_pred = pd.DataFrame(columns=scaler.feature_names_in_)
     for col in X_pred.columns:
         X_pred[col] = diff_df[col] if col in diff_df.columns else 0.0
 
-    # Get predictions from all models
     X_scaled = pd.DataFrame(
         scaler.transform(X_pred), columns=X_pred.columns
     )
 
     probs = {}
     for name, model in models.items():
-        probs[name] = float(model.predict_proba(X_scaled)[:, 1][0])
+        raw_p = float(model.predict_proba(X_scaled)[:, 1][0])
+        if calibrators and name in calibrators:
+            raw_p = float(calibrators[name].predict([raw_p])[0])
+        probs[name] = raw_p
 
-    # Ensemble
     weights = config.ENSEMBLE_WEIGHTS
     w_sum = sum(weights)
     ens_prob = sum(
         w / w_sum * probs.get(n, 0.5)
         for n, w in zip(["logistic", "xgboost", "rf"], weights)
     )
+    if calibrators and "ensemble" in calibrators:
+        ens_prob = float(calibrators["ensemble"].predict([ens_prob])[0])
 
     team_a_name = team_a.get(config.STATS_TEAM_NAME_COL, "Team A")
     team_b_name = team_b.get(config.STATS_TEAM_NAME_COL, "Team B")
@@ -159,23 +160,27 @@ def find_team(stats: pd.DataFrame, name: str, season: int) -> pd.Series | None:
 # Save / load trained models
 # ───────────────────────────────────────────────────────────────
 
-def save_models(models: dict, scaler, path: Path | None = None) -> None:
-    """Save trained models and scaler to disk."""
+def save_models(models: dict, scaler, calibrators=None, path: Path | None = None) -> None:
+    """Save trained models, scaler, and optional calibrators to disk."""
     if path is None:
         path = MODEL_DIR
     path.mkdir(parents=True, exist_ok=True)
+    payload = {"models": models, "scaler": scaler}
+    if calibrators is not None:
+        payload["calibrators"] = calibrators
     with open(path / "trained_models.pkl", "wb") as f:
-        pickle.dump({"models": models, "scaler": scaler}, f)
+        pickle.dump(payload, f)
     print(f"  Saved models to {path / 'trained_models.pkl'}")
 
 
-def load_models(path: Path | None = None) -> tuple[dict, object]:
-    """Load trained models and scaler from disk."""
+def load_models(path: Path | None = None) -> tuple[dict, object, dict | None]:
+    """Load trained models, scaler, and calibrators from disk."""
     if path is None:
         path = MODEL_DIR
     with open(path / "trained_models.pkl", "rb") as f:
         data = pickle.load(f)
-    return data["models"], data["scaler"]
+    calibrators = data.get("calibrators", None)
+    return data["models"], data["scaler"], calibrators
 
 
 # ───────────────────────────────────────────────────────────────
@@ -194,9 +199,10 @@ def main():
 
     # Load or train models
     model_file = MODEL_DIR / "trained_models.pkl"
+    calibrators = None
     if model_file.exists() and not args.retrain:
         print("Loading trained models...")
-        models, scaler = load_models()
+        models, scaler, calibrators = load_models()
     else:
         print("Training models on all historical data...")
         training_df = build_training_data()
@@ -223,7 +229,8 @@ def main():
             return
 
         feature_cols = config.FEATURES
-        result = predict_matchup(team_a, team_b, models, scaler, feature_cols)
+        result = predict_matchup(team_a, team_b, models, scaler, feature_cols,
+                                 calibrators=calibrators)
 
         team_a_name = result["team_a"]
         team_b_name = result["team_b"]

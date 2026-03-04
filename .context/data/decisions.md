@@ -65,3 +65,48 @@
 **Decision**: Flagged for next session — needs architectural changes to the diversity mechanism
 **Candidate approaches**: (1) Force diversity at E8/F4/champion level, not just pods, (2) Increase `top_k_per_pod` beyond 2, (3) Add R64 upset forcing for select matchups, (4) Use the full Final Four combo enumeration that already exists (`enumerate_final_four_combos`) instead of only pod combos, (5) Switch MatchupCache from logistic-only to ensemble/RF
 **Revisit if**: Immediately — this is the top priority for bracket quality
+
+## Champion x Temperature stratified sampling for bracket diversity
+**Date**: 2026-03-03
+**Context**: Pod-level diversity (varying S16 winners) was insufficient — 4/5 brackets had identical E8/F4/champion. The greedy EV pass from S16 upward collapsed late-round picks.
+**Options considered**: (1) Forced champion/F4 with deterministic temperature-adjusted EV, (2) Forced champion with sampled (probabilistic) non-champion games, (3) Portfolio simulation (Monte Carlo optimize across all brackets), (4) Upset-tier layering
+**Decision**: Stratified sampling — for each (champion, temperature) cell in a grid, generate K candidates via sampling with `forced_champion`, keep the best by EV. Grid: 5 champions x 3 temps = 15 brackets.
+**Reasoning**: Sampling > deterministic EV because temperature-adjusted EV is a step function (a game flips at exactly one threshold), while sampling produces diverse upset combinations. Stratified > unconstrained selection because it guarantees even coverage (no champion or temperature tier is over-represented). Forced champion directly solves the "all brackets pick same champion" problem.
+**Revisit if**: E8 convergence within same-champion brackets becomes a problem (could add forced F4 diversity), or if portfolio simulation (approach D) is worth the additional complexity
+
+## Bracket generation config: temps=[0.4, 0.9, 1.6], K=12
+**Date**: 2026-03-03
+**Context**: Needed to tune temperature tiers and candidates-per-cell (K) for the new champion x temperature pipeline. Ran 10 experiments across 2 rounds.
+**Key finding**: K is the dominant diversity lever. K=100 over-optimizes toward chalk (69.7% overlap). K=1 produces garbage (43.5% overlap but EV=58). K=10-20 is the sweet spot.
+**Decision**: `BRACKET_TEMPERATURE_TIERS = [0.4, 0.9, 1.6]`, `BRACKET_CANDIDATES_PER_CELL = 12`
+**Reasoning**: 0.4 = chalk (strong model signal), 0.9 = near raw probability (moderate upsets), 1.6 = genuine chaos. K=12 filters garbage without over-converging. Produces 56.8% mean overlap, 5 unique F4s, 6 unique E8s. Good balance of quality and diversity.
+**Revisit if**: Different tournament year produces degenerate results, or if the EV floor (73.4) on high-temp low-probability-champion brackets is too low
+
+## Ensemble weights: XGBoost zeroed out
+**Date**: 2026-03-03
+**Context**: ENSEMBLE_WEIGHTS were arbitrary [0.30, 0.45, 0.25] (LogReg, XGB, RF). Needed optimization.
+**Options considered**: (1) Grid search, (2) scipy.optimize with softmax parameterization on LOSO OOF predictions
+**Decision**: Optimized via scipy Nelder-Mead. Result: [0.5139, 0.0, 0.4861]. XGBoost gets zero weight.
+**Reasoning**: XGBoost had the worst LOSO log-loss (0.6063) by a wide margin. The optimal ensemble is a ~51/49 blend of logistic regression and random forest. This improved ensemble log-loss from 0.5723 to 0.5608, making ensemble the best model overall.
+**Revisit if**: XGBoost hyperparameter tuning significantly improves its performance, or if adding new features changes the relative model strengths
+
+## MatchupCache switched from logistic to ensemble
+**Date**: 2026-03-03
+**Context**: MatchupCache in simulate.py used `win_prob_a_logistic` (comment said "use best single model" but logistic was actually the worst). All bracket engine probability calculations flow through this cache.
+**Decision**: Switch to `win_prob_a_ensemble` with optimized weights and isotonic calibration
+**Reasoning**: Ensemble is now the best model by log-loss (0.5608). Adding calibration further improves to 0.5515. Every probability in the bracket engine benefits from this improvement.
+**Revisit if**: A single model clearly dominates the ensemble, or if calibration causes issues at probability extremes
+
+## Added isotonic probability calibration
+**Date**: 2026-03-03
+**Context**: Raw model probabilities used directly in bracket engine. Well-calibrated probabilities are critical for DP optimizer and path probability calculations.
+**Decision**: Fit isotonic regression calibrators on LOSO OOF predictions for each base model + ensemble. Stored in pkl file and applied at prediction time.
+**Reasoning**: Isotonic regression improved ensemble log-loss by 0.0095 (0.5610 -> 0.5515). More flexible than Platt scaling. Applied transparently through predict_matchup() and MatchupCache.
+**Revisit if**: Calibration causes probability compression at extremes, or if a different calibration method (Venn-Abers, beta calibration) would be more appropriate
+
+## F4 diversity via forced regional winners
+**Date**: 2026-03-03
+**Context**: Within same forced champion, all 3 temperature brackets tended to converge on identical E8/F4 picks from non-champion regions.
+**Decision**: For each champion, at higher temperature tiers, force the #2 team (by regional championship probability) to win their region. temp_idx=1 forces 1 alternative region, temp_idx=2 forces 2.
+**Reasoning**: Directly breaks E8/F4 convergence within same-champion brackets. Mean overlap dropped from ~63% to 55.5%. Low temperature bracket (chalk) is unaffected. Minimal code change — extends existing `simulate_bracket_with_temperature` with `forced_regional_winners` parameter.
+**Revisit if**: The #2 regional pick is consistently a bad choice (too low probability), or if a more sophisticated approach (forced F4 combos enumeration) would produce better results

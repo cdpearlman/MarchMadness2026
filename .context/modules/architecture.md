@@ -20,9 +20,9 @@ Barttorvik season CSVs (data/barttorvik/YYYY.csv, 40 cols each)
   │
   ├─ feature_engineering.py ──→ stat differentials (TeamA − TeamB)
   │
-  └─ models.py ──→ trained models + LOSO CV results + SHAP importance
+  └─ models.py ──→ trained models + LOSO CV + SHAP + calibrators + ensemble weight optimization
         │
-        └─ predict.py ──→ win probabilities for any matchup
+        └─ predict.py ──→ win probabilities for any matchup (calibrated)
               │
               └─ bracket_engine.py ──→ optimized bracket picks
 ```
@@ -36,10 +36,11 @@ Previous: KenPom data via Kaggle (backed up as `team_stats_kenpom_backup.csv`).
 ## Layer 1: Game Probability Model
 
 ### Models
-- **Random Forest** — best performer (0.564 log-loss, 70.3% accuracy, 0.775 AUC)
-- **XGBoost** — 0.574 log-loss, 70.7% accuracy
-- **Logistic Regression** — 0.575 log-loss, 69.8% accuracy
-- **Ensemble** (weighted blend of all three)
+- **Ensemble** — best performer (0.5608 log-loss, 70.0% accuracy, 0.778 AUC). Optimized weights: [0.5139 LogReg, 0.0 XGB, 0.4861 RF]
+- **Random Forest** — 0.5644 log-loss
+- **Logistic Regression** — 0.5650 log-loss
+- **XGBoost** — 0.6063 log-loss (zeroed out in ensemble)
+- **Probability Calibration** — isotonic regression on LOSO OOF predictions. Reduces ensemble log-loss by ~0.01. Calibrators stored in `trained_models.pkl` alongside models and scaler. Applied transparently in `predict_matchup()`.
 
 ### Features (24 differentials)
 All features computed as `TeamA_value - TeamB_value`. Defined in `config.py` using native Barttorvik column names:
@@ -71,13 +72,23 @@ All features computed as `TeamA_value - TeamB_value`. Defined in `config.py` usi
 ### Previous Approach: Monte Carlo (deprecated direction)
 Monte Carlo simulation was too greedy — a 51% favorite always won over a 49% underdog, ignoring strategic value of upsets (better next-round matchups, bracket diversity). The analytical DP approach handles this by evaluating full paths through the bracket.
 
-### Bracket Diversity
-The goal is to maximize the probability that ONE bracket scores extremely well, not to have all brackets be decent. This requires:
-- Diverse champion/Final Four picks across the bracket set
-- Strategic upset selections where the risk/reward math favors it
-- Diversity weighting parameter to control overlap between brackets
+### Bracket Diversity: Champion x Temperature Stratified Sampling
+The goal is to maximize the probability that ONE bracket scores extremely well, not to have all brackets be decent. The architecture uses a two-axis grid:
 
-**Known limitation**: Current diversity operates only at pod level (S16 winners). The greedy EV pass from S16 upward collapses late-round picks, causing most brackets to share the same E8/F4/champion. R64 picks are never diversified. Needs structural improvement — see decisions.md for candidate approaches.
+1. **Champion axis**: Top N champions by P(championship) from analytical path probabilities. Each bracket forces a specific champion to win every game on their path (R1 through championship).
+2. **Temperature axis**: Controls upset aggressiveness for all non-champion games via `apply_temperature()`. Low temp = chalk, high temp = chaos.
+
+For each (champion, temp) cell: generate K candidate brackets via `simulate_bracket_with_temperature` with `forced_champion`, select the best by expected score. Default config: 5 champions x 3 temps (0.4/0.9/1.6) x K=12 = 15 brackets from 180 candidates.
+
+Key design: sampling (probabilistic coin flips) over deterministic EV for non-forced picks. Deterministic temperature-adjusted EV is a step function — a game flips at one threshold. Sampling produces diverse upset combinations. K must be kept low (10-20) to avoid over-optimizing toward chalk.
+
+**F4 diversity layer**: Within the same forced champion, higher temperature tiers force alternative regional winners (the #2 team by regional championship probability) in non-champion regions. temp_idx=1 forces 1 alternative region, temp_idx=2 forces 2. This breaks E8/F4 convergence within same-champion brackets.
+
+Old pod-level diversity functions remain in `bracket_engine.py` but are no longer called.
+
+### Backtesting
+
+`src/backtest.py` provides game-level LOSO backtesting. For each held-out season, trains models on remaining seasons, predicts all tournament games, and compares model accuracy/log-loss against a seed-only baseline. Output saved to `data/processed/backtest_results.csv`.
 
 ## Configuration
 
@@ -98,4 +109,5 @@ All paths, features, hyperparameters, and overrides live in `src/config.py`. Thi
 | `src/bracket_engine.py` | Analytical DP bracket optimization |
 | `src/simulate.py` | Bracket simulation and strategy generation |
 | `src/run_eval.py` | Helper to run full eval and save results |
+| `src/backtest.py` | Game-level LOSO backtesting vs seed baseline |
 | `tune_diversity.py` | Parameter tuning for bracket diversity weights |

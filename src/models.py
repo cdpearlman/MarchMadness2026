@@ -20,6 +20,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
@@ -147,6 +150,135 @@ def loso_cv(
             })
 
     return {name: pd.DataFrame(rows) for name, rows in results.items()}
+
+
+def loso_collect_oof_predictions(
+    X: pd.DataFrame,
+    y: pd.Series,
+    seasons: pd.Series,
+) -> tuple[np.ndarray, dict[str, np.ndarray]]:
+    """
+    Run LOSO CV and collect all out-of-fold predictions for each base model.
+
+    Returns (y_all, model_probas) where y_all is the concatenated true labels
+    and model_probas maps model_name -> concatenated predicted probabilities,
+    both in the same row order.
+    """
+    unique_seasons = sorted(seasons.unique())
+    base_models = ["logistic", "xgboost", "rf"]
+
+    y_parts: list[np.ndarray] = []
+    proba_parts: dict[str, list[np.ndarray]] = {n: [] for n in base_models}
+
+    for test_season in unique_seasons:
+        train_mask = seasons != test_season
+        test_mask = seasons == test_season
+
+        X_train, X_test = X[train_mask], X[test_mask]
+        y_train, y_test = y[train_mask], y[test_mask]
+
+        scaler = StandardScaler()
+        X_train_s = pd.DataFrame(
+            scaler.fit_transform(X_train),
+            columns=X_train.columns, index=X_train.index,
+        )
+        X_test_s = pd.DataFrame(
+            scaler.transform(X_test),
+            columns=X_test.columns, index=X_test.index,
+        )
+
+        for name in base_models:
+            model = _create_model(name)
+            if name == "xgboost":
+                model.fit(X_train_s, y_train,
+                          eval_set=[(X_test_s, y_test)], verbose=False)
+            else:
+                model.fit(X_train_s, y_train)
+            proba_parts[name].append(model.predict_proba(X_test_s)[:, 1])
+
+        y_parts.append(y_test.values)
+
+    y_all = np.concatenate(y_parts)
+    model_probas = {n: np.concatenate(proba_parts[n]) for n in base_models}
+    return y_all, model_probas
+
+
+def optimize_ensemble_weights(
+    y_true: np.ndarray,
+    model_probas: dict[str, np.ndarray],
+) -> list[float]:
+    """
+    Find ensemble weights that minimize log-loss on out-of-fold predictions.
+    Uses Nelder-Mead on the simplex (softmax parameterization).
+    """
+    names = ["logistic", "xgboost", "rf"]
+    proba_matrix = np.column_stack([model_probas[n] for n in names])
+
+    def objective(raw_weights: np.ndarray) -> float:
+        exp_w = np.exp(raw_weights - raw_weights.max())
+        w = exp_w / exp_w.sum()
+        blended = proba_matrix @ w
+        blended = np.clip(blended, 1e-15, 1 - 1e-15)
+        return log_loss(y_true, blended)
+
+    best_result = None
+    for init in [np.zeros(3), np.array([0.0, 0.5, 0.5]), np.array([0.5, 0.0, 0.5])]:
+        result = minimize(objective, init, method="Nelder-Mead",
+                          options={"maxiter": 2000, "xatol": 1e-6, "fatol": 1e-8})
+        if best_result is None or result.fun < best_result.fun:
+            best_result = result
+
+    exp_w = np.exp(best_result.x - best_result.x.max())
+    optimal = exp_w / exp_w.sum()
+
+    print(f"\n  Ensemble weight optimization (minimize LOSO log-loss):")
+    for n, w in zip(names, optimal):
+        print(f"    {n}: {w:.4f}")
+    print(f"    Optimized log-loss: {best_result.fun:.6f}")
+
+    old_w = np.array(config.ENSEMBLE_WEIGHTS[:3])
+    old_w = old_w / old_w.sum()
+    old_blend = proba_matrix @ old_w
+    old_ll = log_loss(y_true, np.clip(old_blend, 1e-15, 1 - 1e-15))
+    print(f"    Previous  log-loss: {old_ll:.6f}")
+    print(f"    Improvement: {old_ll - best_result.fun:.6f}")
+
+    return [round(float(w), 4) for w in optimal]
+
+
+def fit_calibrators(
+    y_true: np.ndarray,
+    model_probas: dict[str, np.ndarray],
+) -> dict[str, IsotonicRegression]:
+    """
+    Fit isotonic regression calibrators on LOSO out-of-fold predictions
+    for each base model plus the ensemble blend.
+    """
+    calibrators: dict[str, IsotonicRegression] = {}
+    names = ["logistic", "xgboost", "rf"]
+
+    for name in names:
+        iso = IsotonicRegression(y_min=0.001, y_max=0.999, out_of_bounds="clip")
+        iso.fit(model_probas[name], y_true)
+        calibrators[name] = iso
+
+    weights = np.array(config.ENSEMBLE_WEIGHTS[:3])
+    weights = weights / weights.sum()
+    proba_matrix = np.column_stack([model_probas[n] for n in names])
+    ensemble_raw = proba_matrix @ weights
+
+    iso_ens = IsotonicRegression(y_min=0.001, y_max=0.999, out_of_bounds="clip")
+    iso_ens.fit(ensemble_raw, y_true)
+    calibrators["ensemble"] = iso_ens
+
+    raw_ll = log_loss(y_true, np.clip(ensemble_raw, 1e-15, 1 - 1e-15))
+    cal_ll = log_loss(y_true, iso_ens.predict(ensemble_raw))
+    print(f"\n  Probability calibration (isotonic regression on LOSO OOF):")
+    print(f"    Ensemble raw  log-loss: {raw_ll:.6f}")
+    print(f"    Ensemble cal  log-loss: {cal_ll:.6f}")
+    print(f"    Improvement: {raw_ll - cal_ll:.6f}")
+
+    return calibrators
 
 
 def _get_models(model_name: str) -> list[str]:
@@ -303,10 +435,31 @@ if __name__ == "__main__":
     results = loso_cv(X, y, seasons, model_name="all")
     print_results(results)
 
-    print("\nStep 4: Training final models...")
+    print("\nStep 4: Optimizing ensemble weights...")
+    y_oof, model_probas = loso_collect_oof_predictions(X, y, seasons)
+    optimal_weights = optimize_ensemble_weights(y_oof, model_probas)
+    print(f"\n  To apply: set ENSEMBLE_WEIGHTS = {optimal_weights} in config.py")
+
+    print("\nStep 5: Fitting probability calibrators...")
+    calibrators = fit_calibrators(y_oof, model_probas)
+
+    print("\nStep 6: Training final models...")
     models, scaler = train_final_models(X, y)
 
-    print("\nStep 5: Feature importance (SHAP)...")
+    print("\nStep 7: Saving models + calibrators...")
+    import pickle
+    model_dir = config.PROJECT_ROOT / "models"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    with open(model_dir / "trained_models.pkl", "wb") as f:
+        pickle.dump({"models": models, "scaler": scaler, "calibrators": calibrators}, f)
+    print(f"  Saved to {model_dir / 'trained_models.pkl'}")
+
+    print("\nStep 8: Feature importance (SHAP)...")
     importance = compute_shap_importance(models["xgboost"], X, scaler)
     print(f"\n  Top-10 features by SHAP importance:")
     print(importance.head(10).to_string(index=False))
+
+    shap_path = config.PROCESSED_DIR / "shap_importance.csv"
+    config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    importance.to_csv(shap_path, index=False)
+    print(f"  Saved SHAP importance -> {shap_path}")
