@@ -40,14 +40,35 @@ def load_ownership(path: str | Path) -> dict:
             print("  [!] WARNING: Using placeholder ownership data from JSON note.")
         return data
 
-def build_region_round1(region_seeds: dict) -> list[tuple[str, str]]:
-    """Get the standard R64 matchups for a region."""
+def resolve_first_four(tbd_str: str, prob_cache: np.ndarray, team_to_idx: dict) -> str:
+    """Resolve a TBD_TeamA_TeamB string by picking the model favorite."""
+    parts = tbd_str[4:].split("_")
+    if len(parts) != 2:
+        # Fallback: if parsing fails, return first part
+        print(f"  [!] Could not parse First Four entry '{tbd_str}', using '{parts[0]}'")
+        return parts[0]
+    t1, t2 = parts[0], parts[1]
+    if t1 not in team_to_idx or t2 not in team_to_idx:
+        # One team missing from stats — pick the one we have
+        if t1 in team_to_idx:
+            return t1
+        if t2 in team_to_idx:
+            return t2
+        print(f"  [!] Neither First Four team found in cache: {t1}, {t2}")
+        return t1
+    p1 = prob_cache[team_to_idx[t1], team_to_idx[t2]]
+    winner = t1 if p1 >= 0.5 else t2
+    print(f"  First Four: {t1} vs {t2} -> {winner} ({max(p1, 1-p1):.1%})")
+    return winner
+
+def build_region_round1(region_seeds: dict, prob_cache: np.ndarray, team_to_idx: dict) -> list[tuple[str, str]]:
+    """Get the standard R64 matchups for a region, resolving First Four via model."""
     order = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
     matchups = []
     for s1, s2 in order:
         t1, t2 = region_seeds[str(s1)], region_seeds[str(s2)]
-        if t1.startswith("TBD_"): t1 = t1.split("_")[1]
-        if t2.startswith("TBD_"): t2 = t2.split("_")[1]
+        if t1.startswith("TBD_"): t1 = resolve_first_four(t1, prob_cache, team_to_idx)
+        if t2.startswith("TBD_"): t2 = resolve_first_four(t2, prob_cache, team_to_idx)
         matchups.append((t1, t2))
     return matchups
 
@@ -142,23 +163,43 @@ def generate_bracket(
             f4_teams.append(t)
             locked_teams[t] = ["r64", "r32", "s16", "e8"]
     else:
-        # Value base F4
-        for r in ff_regions:
-            if r == region_of_champ: continue
+        # Build candidates for each non-champion region
+        other_regions = [r for r in ff_regions if r != region_of_champ]
+        region_candidates = {}
+        for r in other_regions:
             r_teams = reach_probs[reach_probs["region"] == r].copy()
             r_teams["f4_own"] = r_teams["team"].apply(lambda t: ownership.get("final_four", {}).get(t) or get_uniform_ownership("f4"))
             r_teams["f4_val"] = r_teams["p_f4"] / r_teams["f4_own"]
-            
-            if b_type == "contrarian":
-                r_teams = r_teams.sort_values("f4_val", ascending=False)
-            else:
-                # Type 2: 2 chalk, 1 value (but we do this region by region, so we just pick a mix)
-                # for simplicity, let's just pick highest value for non-chalk if it's > 1.2, else chalk
-                r_teams = r_teams.sort_values("f4_val", ascending=False)
-            
-            top_val = r_teams.iloc[0]["team"]
-            f4_teams.append(top_val)
-            locked_teams[top_val] = ["r64", "r32", "s16", "e8"]
+            chalk_pick = r_teams.sort_values("p_f4", ascending=False).iloc[0]["team"]
+            value_pick = r_teams.sort_values("f4_val", ascending=False).iloc[0]["team"]
+            region_candidates[r] = {"chalk": chalk_pick, "value": value_pick, "r_teams": r_teams}
+
+        if b_type == "contrarian":
+            # All value picks
+            for r in other_regions:
+                t = region_candidates[r]["value"]
+                f4_teams.append(t)
+                locked_teams[t] = ["r64", "r32", "s16", "e8"]
+        else:
+            # Type 2: 2 chalk + 1 value pick
+            # Find the region with the best value differential (value != chalk and high f4_val)
+            best_value_region = None
+            best_value_score = -1
+            for r in other_regions:
+                cand = region_candidates[r]
+                if cand["value"] != cand["chalk"]:
+                    val_row = cand["r_teams"][cand["r_teams"]["team"] == cand["value"]].iloc[0]
+                    if val_row["f4_val"] > best_value_score:
+                        best_value_score = val_row["f4_val"]
+                        best_value_region = r
+
+            for r in other_regions:
+                if r == best_value_region:
+                    t = region_candidates[r]["value"]
+                else:
+                    t = region_candidates[r]["chalk"]
+                f4_teams.append(t)
+                locked_teams[t] = ["r64", "r32", "s16", "e8"]
 
     # Now play the games
     regions_order = ff_regions # same as final four order
@@ -169,7 +210,7 @@ def generate_bracket(
     # Play regional games
     current_round = []
     for r in regions_order:
-        current_round.extend(build_region_round1(base_bracket["regions"][r]))
+        current_round.extend(build_region_round1(base_bracket["regions"][r], prob_cache, team_to_idx))
         
     rounds = ["r64", "r32", "s16", "e8", "f4"]
     for rd in rounds:
@@ -226,21 +267,29 @@ def generate_bracket(
         "overlap_with_previous": None
     }
     
-    # Calculate overlap
+    # Calculate overlap against all previous brackets
     if prev_brackets:
-        last = prev_brackets[-1]
-        matches = 0
-        total = 0
-        # map internal round names to the exported keys
-        okd = ["r64", "r32", "sweet_16", "elite_eight", "final_four", "champion"]
-        for rd in okd:
-            v1 = set(bracket[rd]) if isinstance(bracket[rd], list) else {bracket[rd]}
-            v2 = set(last[rd]) if isinstance(last[rd], list) else {last[rd]}
-            matches += len(v1.intersection(v2))
-            total += len(v1)
-        bracket["overlap_with_previous"] = float(matches / total)
-        
+        overlaps = []
+        for prev in prev_brackets:
+            overlaps.append(compute_bracket_overlap(bracket, prev))
+        bracket["overlap_with_previous"] = float(max(overlaps))
+
     return bracket
+
+
+def compute_bracket_overlap(a: dict, b: dict) -> float:
+    """Compute fraction of identical picks between two brackets (position-aware)."""
+    round_keys = ["r64", "r32", "sweet_16", "elite_eight", "final_four", "champion"]
+    matches = 0
+    total = 0
+    for rd in round_keys:
+        v1 = a[rd] if isinstance(a[rd], list) else [a[rd]]
+        v2 = b[rd] if isinstance(b[rd], list) else [b[rd]]
+        for pick1, pick2 in zip(v1, v2):
+            total += 1
+            if pick1 == pick2:
+                matches += 1
+    return matches / total if total > 0 else 0.0
 
 def main():
     parser = argparse.ArgumentParser(description="Bracket Generator")
@@ -281,13 +330,22 @@ def main():
     for i, b_type in enumerate(args.types):
         b = generate_bracket(i+1, b_type, reach_probs, ownership, base_bracket, prob_cache, team_to_idx, brackets)
         brackets.append(b)
-        
+
+    # Validate overlap constraint (<85% between any pair)
+    MAX_OVERLAP = 0.85
+    for i in range(len(brackets)):
+        for j in range(i + 1, len(brackets)):
+            overlap = compute_bracket_overlap(brackets[i], brackets[j])
+            if overlap >= MAX_OVERLAP:
+                print(f"  [!] WARNING: Bracket {brackets[i]['bracket_id']} ({brackets[i]['type']}) and "
+                      f"Bracket {brackets[j]['bracket_id']} ({brackets[j]['type']}) have {overlap:.0%} overlap (>= {MAX_OVERLAP:.0%} threshold)")
+
     # Print report
     print()
     for b in brackets:
-        print("━" * 50)
+        print("=" * 50)
         print(f"Bracket {b['bracket_id']} — {b['type'].upper()}")
-        print("━" * 50)
+        print("=" * 50)
         champ = b["champion"]
         c_row = reach_probs[reach_probs["team"] == champ].iloc[0]
         own = ownership.get("champion", {}).get(champ) or get_uniform_ownership("champ")
@@ -298,14 +356,14 @@ def main():
         if b['upset_picks']:
             print("Upset picks:")
             for u in b['upset_picks']:
-                print(f"  → {u['round'].upper()}: {u['pick']} over opponent in {u['game']} (model: {u['model_prob']:.0%}, public: {u['public_ownership']:.0%})")
+                print(f"  -> {u['round'].upper()}: {u['pick']} over opponent in {u['game']} (model: {u['model_prob']:.0%}, public: {u['public_ownership']:.0%})")
         else:
             print("Upset picks:   None")
             
         print(f"Expected score (ESPN standard): {b['expected_score']:.1f}")
         if b['overlap_with_previous'] is not None:
              print(f"Overlap with Prev: {b['overlap_with_previous']:.0%}")
-        print("─" * 50)
+        print("-" * 50)
 
     with open(out_path, "w") as f:
         json.dump(brackets, f, indent=2)

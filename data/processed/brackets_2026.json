@@ -56,7 +56,7 @@
       "Villanova",
       "Wisconsin",
       "Arkansas",
-      "BYU",
+      "N.C. State",
       "Gonzaga",
       "Miami FL",
       "Purdue",
@@ -77,32 +77,32 @@
       "Texas A&M",
       "Houston"
     ],
-    "expected_score": 88.61124000000001,
-    "value_score_champion": 0.9177777777777779,
+    "expected_score": 88.38496,
+    "value_score_champion": 0.1652,
     "upset_picks": [],
     "overlap_with_previous": null
   },
   {
     "bracket_id": 2,
     "type": "value",
-    "champion": "Purdue",
+    "champion": "Duke",
     "final_four": [
-      "Purdue",
       "Duke",
+      "Arizona",
       "Michigan",
       "Illinois"
     ],
     "elite_eight": [
       "Duke",
-      "Purdue",
+      "Arizona",
       "Michigan",
       "Illinois"
     ],
     "sweet_16": [
       "Duke",
       "Connecticut",
-      "Arkansas",
-      "Purdue",
+      "Arizona",
+      "Gonzaga",
       "Michigan",
       "Tennessee",
       "Nebraska",
@@ -160,14 +160,21 @@
       "Saint Mary's",
       "Houston"
     ],
-    "expected_score": 79.78328,
-    "value_score_champion": 1.9765000000000001,
+    "expected_score": 84.29000000000002,
+    "value_score_champion": 0.15,
     "upset_picks": [
       {
         "round": "r64",
         "game": "Villanova vs Utah St.",
         "pick": "Utah St.",
         "model_prob": 0.495192289352417,
+        "public_ownership": 0.03125
+      },
+      {
+        "round": "r64",
+        "game": "BYU vs N.C. State",
+        "pick": "BYU",
+        "model_prob": 0.4951923191547394,
         "public_ownership": 0.03125
       },
       {
@@ -221,9 +228,9 @@
       },
       {
         "round": "s16",
-        "game": "Arizona vs Arkansas",
-        "pick": "Arkansas",
-        "model_prob": 0.3500000238418579,
+        "game": "Gonzaga vs Purdue",
+        "pick": "Gonzaga",
+        "model_prob": 0.3588709533214569,
         "public_ownership": 0.125
       },
       {
@@ -241,23 +248,23 @@
         "public_ownership": 0.125
       }
     ],
-    "overlap_with_previous": 0.7846153846153846
+    "overlap_with_previous": 0.7538461538461538
   },
   {
     "bracket_id": 3,
     "type": "contrarian",
-    "champion": "Houston",
+    "champion": "Arizona",
     "final_four": [
-      "Houston",
-      "Duke",
       "Arizona",
-      "Michigan"
+      "Duke",
+      "Michigan",
+      "Illinois"
     ],
     "elite_eight": [
       "Duke",
       "Arizona",
       "Michigan",
-      "Houston"
+      "Illinois"
     ],
     "sweet_16": [
       "Duke",
@@ -267,7 +274,7 @@
       "Michigan",
       "Tennessee",
       "Nebraska",
-      "Houston"
+      "Illinois"
     ],
     "r32": [
       "Duke",
@@ -321,14 +328,21 @@
       "Saint Mary's",
       "Houston"
     ],
-    "expected_score": 79.14808000000001,
-    "value_score_champion": 1.1255,
+    "expected_score": 80.13632000000003,
+    "value_score_champion": 0.09762,
     "upset_picks": [
       {
         "round": "r64",
         "game": "Villanova vs Utah St.",
         "pick": "Utah St.",
         "model_prob": 0.495192289352417,
+        "public_ownership": 0.03125
+      },
+      {
+        "round": "r64",
+        "game": "BYU vs N.C. State",
+        "pick": "BYU",
+        "model_prob": 0.4951923191547394,
         "public_ownership": 0.03125
       },
       {
@@ -409,6 +423,6 @@
         "public_ownership": 0.125
       }
     ],
-    "overlap_with_previous": 0.8615384615384616
+    "overlap_with_previous": 0.9384615384615385
   }
 ]

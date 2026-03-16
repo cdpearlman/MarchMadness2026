@@ -1,0 +1,58 @@
+# March Madness 2026
+
+NCAA tournament bracket prediction pipeline: ML model for game win probabilities + analytical DP bracket optimizer. Built with Python, scikit-learn, XGBoost, pandas, SHAP.
+
+## Critical Rules
+
+- **Never use in-tournament stats** — only pre-tournament metrics. This is a data leakage constraint, not a preference.
+- **Watch for seed bias** — if the model is just learning "higher seed wins," it's useless. Always check SHAP values; non-seed features must carry meaningful weight.
+- **Bracket diversity is mandatory** — the goal is P(one bracket scores extremely well), not high average score. Check overlap metrics after generation; >80% mean overlap = problem.
+- **Two rows per game** — always generate both A-vs-B and B-vs-A training rows to prevent positional bias.
+- **LOSO CV only** — never evaluate on seasons included in training. 2020 is excluded (no tournament).
+- **Config is the source of truth** — all paths, features, hyperparams live in `src/config.py`. Don't scatter magic values.
+- **Pre-2008 physical features** — fill EffectiveHeight/Experience with 0 for seasons before 2008.
+- **Data source is Barttorvik** — `team_stats.csv` is built from `data/barttorvik/YYYY.csv` files via `ingest_barttorvik.py`. Download new seasons with `download_barttorvik.py`. Column names are native Barttorvik (adj_o, adj_d, efg, etc.).
+- **No emoji in print statements** — Windows cp1252 encoding crashes on emoji. Use plain ASCII markers like `[!]`, `[OK]`.
+
+## Module Map
+
+| Module | Path | Load when |
+|--------|------|-----------|
+| Architecture | .context/modules/architecture.md | Working on pipeline structure, data flow, model design, or bracket engine |
+| Conventions | .context/modules/conventions.md | Working on code patterns, validation, running commands, or data integrity |
+
+## Data Files
+
+| File | Path | Purpose |
+|------|------|---------|
+| Sessions | .context/data/sessions.md | Running work log (append-only) |
+| Decisions | .context/data/decisions.md | Decision records with reasoning (append-only) |
+| Lessons | .context/data/lessons.md | Hard-won knowledge and past mistakes (append-only) |
+
+## Memory Maintenance
+
+Always look for opportunities to update the memory system:
+- **New patterns**: "We've been doing X consistently — should I add it to conventions?"
+- **Decisions made**: "We decided Y — should I record this in decisions.md?"
+- **Mistakes caught**: "This went wrong because Z — should I add it to lessons.md?"
+- **Scope changes**: "The project now includes W — should I create a new module?"
+- **Preferences revealed**: "You've corrected me on this pattern — should I update conventions?"
+
+**Before any memory update**:
+1. State which file(s) would change and what the change would be
+2. Wait for approval
+3. Never update memory mid-task without mentioning it
+
+**Rules**:
+- Routing file changes are high-stakes — propose carefully
+- Data files are append-only — never remove or overwrite past entries
+- Modules can be edited — but changes should be targeted, not full rewrites
+- After substantive work sessions, append a summary to .context/data/sessions.md
+
+## Preferences
+
+- Act as a peer/colleague, not a subordinate. Analyze thinking, push back when something seems wrong.
+- Just do it — don't ask permission for routine work. Check in at decision points or when uncertain.
+- Always be certain about how to proceed (via research or asking) before making changes. No guessing.
+- Validation = run full pipeline + inspect output CSVs + check SHAP. No unit test suite.
+- Commit when it works. Major refactors get their own branch.
