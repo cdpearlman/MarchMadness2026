@@ -44,14 +44,11 @@ python src/predict.py --retrain --season 2026
 # Run game-level backtesting (model vs seed baseline across all seasons)
 python src/backtest.py
 
-# Generate optimized bracket set (5 champions x 3 temps = 15 brackets)
-python src/simulate.py --season 2025 --no-sim
+# Run Monte Carlo simulation to estimate per-team reach probabilities
+python src/simulate.py --n-sims 50000
 
-# Override champion count, temperatures, or candidates per cell
-python src/simulate.py --season 2025 --no-sim --n-champions 3 --temperatures 0.5 1.5
-
-# Full pipeline with Monte Carlo validation
-python src/simulate.py --season 2025 --n-sims 10000
+# Generate specific bracket strategies (Model Chalk, Value Champion, Contrarian)
+python src/bracket_gen.py --ownership data/ownership_2026.json --types chalk value contrarian
 ```
 
 ## Project Structure
@@ -69,7 +66,9 @@ MarchMadness26/
 │
 ├── data/
 │   ├── barttorvik/                     # Per-season Barttorvik CSVs (YYYY.csv)
-│   └── seed_reference.csv             # Historical tournament seeds (from Kaggle)
+│   ├── seed_reference.csv              # Historical tournament seeds (from Kaggle)
+│   ├── bracket_2026.json               # Tournament bracket structure and matchups
+│   └── ownership_2026.json             # Public pick percentages for EV calculation
 │
 ├── src/
 │   ├── config.py                       # All paths, features, hyperparams, overrides
@@ -79,8 +78,8 @@ MarchMadness26/
 │   ├── models.py                       # LogReg, XGBoost, RF, Ensemble + LOSO CV + SHAP + calibration
 │   ├── predict.py                      # CLI for matchup/bracket predictions (calibrated)
 │   ├── backtest.py                     # Game-level LOSO backtesting vs seed baseline
-│   ├── bracket_engine.py               # Analytical DP bracket optimization
-│   ├── simulate.py                     # Bracket simulation and strategy generation
+│   ├── simulate.py                     # Monte Carlo tournament simulator
+│   ├── bracket_gen.py                  # Bracket strategy (Chalk, Value, Contrarian)
 │   └── run_eval.py                     # Helper to run full eval and save results
 │
 ├── data/processed/
@@ -98,8 +97,6 @@ MarchMadness26/
 │
 ├── models/
 │   └── trained_models.pkl              # Pickled models + scaler + calibrators
-│
-└── tune_diversity.py                   # Parameter tuning for bracket diversity weights
 ```
 
 ## Data Pipeline
@@ -122,12 +119,16 @@ MNCAATourneyDetailedResults.csv → data_prep.py → training_data.csv
                                           (LOSO CV + training)
                                                       │
                                                       ▼
-                                              predict.py
-                                       (bracket predictions)
-                                                      │
-                                                      ▼
-                                           bracket_engine.py
-                                       (optimized bracket picks)
+                                               predict.py
+                                        (bracket predictions)
+                                                       │
+                                                       ▼
+                                              simulate.py
+                                        (Monte Carlo probabilities)
+                                                       │
+                                                       ▼
+                                            bracket_gen.py
+                                     (ownership-adjusted bracket picks)
 ```
 
 ## Features Used (24 differential features)
