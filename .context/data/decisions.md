@@ -40,3 +40,10 @@
 **Decision**: Replaced the DP engine with a clean decoupling: `src/simulate.py` handles Monte Carlo simulation to generate per-round reach probabilities, and `src/bracket_gen.py` overlays pool-specific logic ("Chalk" vs. "Value/Contrarian").
 **Reasoning**: Decoupling probability generation from pick compilation dramatically simplifies the logic and enables explicit pool-type targeting. Ownership-adjusted EV computation (`p_champ / public_ownership_pct`) requires per-round reach probabilities to be pristine and un-adjusted by picking logic. The old DP approach, temperature-based sampling, and forced focal diversity were scrapped as they proved to be a dead-end for optimizing value.
 **Revisit if**: Simulation becomes an execution bottleneck, or Monte-Carlo convergence variance is too high for early-round games.
+
+## Ownership key naming convention: internal round names
+**Date**: 2026-03-16
+**Context**: Ownership JSON keys (`sweet_16`, `elite_eight`) didn't match bracket_gen.py's internal round names (`s16`, `e8`), causing silent fallback to uniform ownership.
+**Decision**: Standardized ownership JSON to use internal round names: `r64`, `r32`, `s16`, `e8`, `f4`, `champ`. Updated `parse_ownership.py` and all lookups in `bracket_gen.py`.
+**Reasoning**: Single source of truth for round name strings. The bracket generator is the primary consumer, so its naming convention wins.
+**Revisit if**: Never — just keep the convention consistent.

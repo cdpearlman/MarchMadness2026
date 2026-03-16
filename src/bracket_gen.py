@@ -36,7 +36,7 @@ def load_ownership(path: str | Path) -> dict:
         return {}
     with open(path, "r") as f:
         data = json.load(f)
-        if "UPDATE WITH REAL OWNERSHIP DATA" in data.get("note", ""):
+        if "UPDATE WITH REAL OWNERSHIP DATA" in str(data.get("note", "")):
             print("  [!] WARNING: Using placeholder ownership data from JSON note.")
         return data
 
@@ -118,16 +118,31 @@ def generate_bracket(
     prev_brackets: list[dict]
 ) -> dict:
     
+    # 0. Resolve First Four and filter eliminated teams from reach_probs
+    eliminated = set()
+    for region_data in base_bracket["regions"].values():
+        for seed, team in region_data.items():
+            if team.startswith("TBD_"):
+                parts = team[4:].split("_")
+                if len(parts) == 2:
+                    t1, t2 = parts[0], parts[1]
+                    if t1 in team_to_idx and t2 in team_to_idx:
+                        p1 = prob_cache[team_to_idx[t1], team_to_idx[t2]]
+                        loser = t2 if p1 >= 0.5 else t1
+                        eliminated.add(loser)
+    if eliminated:
+        reach_probs = reach_probs[~reach_probs["team"].isin(eliminated)].reset_index(drop=True)
+
     # 1. Determine Champion
     if b_type == "chalk":
         champ = reach_probs.iloc[0]["team"]
-        champ_value = reach_probs.iloc[0]["p_champ"] / (ownership.get("champion", {}).get(champ) or get_uniform_ownership("champ"))
+        champ_value = reach_probs.iloc[0]["p_champ"] / (ownership.get("champ", {}).get(champ) or get_uniform_ownership("champ"))
     else:
         # compute value scores
         vals = []
         for _, row in reach_probs.iterrows():
             t = row["team"]
-            own = ownership.get("champion", {}).get(t) or get_uniform_ownership("champ")
+            own = ownership.get("champ", {}).get(t) or get_uniform_ownership("champ")
             val = row["p_champ"] / own
             vals.append((val, t))
         vals.sort(reverse=True)
@@ -168,7 +183,7 @@ def generate_bracket(
         region_candidates = {}
         for r in other_regions:
             r_teams = reach_probs[reach_probs["region"] == r].copy()
-            r_teams["f4_own"] = r_teams["team"].apply(lambda t: ownership.get("final_four", {}).get(t) or get_uniform_ownership("f4"))
+            r_teams["f4_own"] = r_teams["team"].apply(lambda t: ownership.get("f4", {}).get(t) or get_uniform_ownership("f4"))
             r_teams["f4_val"] = r_teams["p_f4"] / r_teams["f4_own"]
             chalk_pick = r_teams.sort_values("p_f4", ascending=False).iloc[0]["team"]
             value_pick = r_teams.sort_values("f4_val", ascending=False).iloc[0]["team"]
@@ -348,7 +363,7 @@ def main():
         print("=" * 50)
         champ = b["champion"]
         c_row = reach_probs[reach_probs["team"] == champ].iloc[0]
-        own = ownership.get("champion", {}).get(champ) or get_uniform_ownership("champ")
+        own = ownership.get("champ", {}).get(champ) or get_uniform_ownership("champ")
         print(f"Champion:      {champ} (p_champ: {c_row['p_champ']:.1%}, ownership: {own:.1%}, value: {b['value_score_champion']:.2f})")
         print(f"Final Four:    {' | '.join(b['final_four'])}")
         print(f"Elite Eight:   {' | '.join(b['elite_eight'])}")

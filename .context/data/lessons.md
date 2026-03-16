@@ -73,3 +73,27 @@
 **Root cause**: The comment was written when the code was first created and never updated when model evaluation results came in. No validation step checked which model the cache was actually using.
 **Fix**: Switched to `win_prob_a_ensemble` with optimized weights. Also added calibration.
 **Rule going forward**: When a component depends on "the best model," verify which model that actually is after every retraining. Don't trust stale comments. The MatchupCache model choice should be a config parameter, not a hardcoded string.
+
+## 2026-03-16 — First Four TBD entries resolved by string split, not model
+**What happened**: `build_region_round1()` resolved `TBD_TeamA_TeamB` entries by splitting on `_` and taking the first team — an arbitrary choice unrelated to team quality.
+**Root cause**: Quick placeholder logic that was never replaced with proper resolution.
+**Fix**: Added `resolve_first_four()` that looks up both teams in the probability cache and picks the model favorite.
+**Rule going forward**: Any time bracket entries involve play-in/First Four games, resolve them using model probabilities, not string manipulation.
+
+## 2026-03-16 — Set-based overlap overstates bracket similarity
+**What happened**: Overlap between brackets was computed using set intersection per round, which ignores position. Two brackets could have the same teams in a round but in entirely different slots (different matchup paths) and still show 100% overlap.
+**Root cause**: Using `set(round_picks).intersection()` instead of position-aware comparison.
+**Fix**: Switched to `zip()`-based comparison that checks each slot individually. Also changed to compute overlap against ALL previous brackets (reporting max) instead of only the last one.
+**Rule going forward**: Bracket overlap must be position-aware. Two brackets with the same Sweet 16 set but different regional paths are meaningfully different and should not be penalized.
+
+## 2026-03-16 — Ownership JSON keys must match internal round names
+**What happened**: Upset validation looked up `ownership.get("s16", {})` but JSON keys were `"sweet_16"`, `"elite_eight"`, etc. Every S16/E8 ownership lookup silently fell back to uniform (1/8 = 12.5%), masking real ownership data.
+**Root cause**: `parse_ownership.py` used descriptive key names while `bracket_gen.py` used terse internal round names. No validation caught the mismatch because the fallback is silent.
+**Fix**: Standardized JSON keys to internal names: `r64`, `r32`, `s16`, `e8`, `f4`, `champ`.
+**Rule going forward**: Ownership JSON keys must exactly match the round name strings used in bracket_gen.py's round loop (`["r64", "r32", "s16", "e8", "f4"]`) and champion/F4 selection (`"champ"`, `"f4"`). If either side changes, the other must follow.
+
+## 2026-03-16 — Play-in losers in reach_probs inflate value scores
+**What happened**: `simulate.py` generates reach probabilities for all 68 teams including both sides of First Four matchups. When `bracket_gen.py` selected F4 value picks, eliminated play-in losers (e.g. Texas) were still in the candidate pool. Texas had 0.01% F4 ownership, giving it a 34.6x value score — the highest in its region — despite being eliminated.
+**Root cause**: No filtering step between the simulation output (all teams) and the bracket generator's value selection (should only consider live teams).
+**Fix**: Added early First Four resolution at the top of `generate_bracket()` that identifies eliminated teams and filters them from `reach_probs` before any champion/F4 selection.
+**Rule going forward**: Any code that reads `reach_probabilities_YYYY.csv` for pick selection must filter to the 64 teams that survived First Four resolution. The simulation intentionally includes all 68 for completeness, but downstream consumers must scope to the live field.

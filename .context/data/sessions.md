@@ -43,3 +43,28 @@
 **Open threads**:
 - Await real 2026 Selection Sunday bracket assignments (`data/bracket_2026.json`).
 - Gather real ESPN/Yahoo public ownership metrics leading into Thursday.
+
+## 2026-03-16 — Bracket Generator Bug Fixes
+**Area**: Bracket generation (`src/bracket_gen.py`)
+**Work done**:
+- Fixed First Four resolution: was arbitrarily picking first team from `TBD_TeamA_TeamB` string split; now uses model win probabilities via `resolve_first_four()`.
+- Fixed value bracket Final Four selection: was picking all-value for non-champion regions; now properly implements 2-chalk + 1-value by finding the region with the best value differential.
+- Fixed overlap calculation: was using set intersection (position-unaware) against only the last bracket; now uses position-aware zip comparison against ALL previous brackets (reports max overlap).
+- Added pairwise overlap validation: warns if any bracket pair exceeds 85% overlap threshold.
+- Replaced remaining Unicode box-drawing characters (━, ─, →) with ASCII equivalents (=, -, ->).
+- Extracted `compute_bracket_overlap()` as a standalone function for reuse.
+
+## 2026-03-16 — Real Ownership Data + Bug Fixes Round 2
+**Area**: Ownership data pipeline, bracket generation bugs
+**Work done**:
+- Scraped Yahoo pick distribution data from `ownership_*.md` files (manually copied from Yahoo Fantasy) and built `parse_ownership.py` to parse and map team names (Yahoo -> bracket names).
+- Populated `data/ownership_2026.json` with real percentages across all 6 rounds (68 teams each), replacing placeholder data.
+- Fixed ownership key mismatch: code used internal round names (`s16`, `e8`) but JSON had descriptive names (`sweet_16`, `elite_eight`). Standardized JSON keys to match internal names (`r64`, `r32`, `s16`, `e8`, `f4`, `champ`).
+- Fixed play-in loser bug: `reach_probs` CSV included eliminated First Four losers. Texas (play-in loser) had 0.01% F4 ownership, inflating its value score to 34.6x and landing it in the Final Four. Added early filtering of eliminated teams from reach_probs in `generate_bracket()`.
+- Verified all ownership lookups now use real Yahoo data (spot-checked Kansas 7.93%, Vanderbilt 10.57%, Arkansas 10.86%).
+**Current bracket output (with real ownership)**:
+- B1 (chalk): Michigan champ, Duke/Arizona/Illinois F4. EV=88.4
+- B2 (value): Texas Tech champ (9.9x value), Louisville/Arizona/Illinois F4. EV=67.9
+- B3 (contrarian): Illinois champ (7.6x value), Louisville/N.C. State/Texas Tech F4. EV=61.9
+**Open threads**:
+- B2 vs B3 overlap is 88% (exceeds 85% threshold). Root cause: R64 is 32/32 identical across all brackets (always chalk), R32 is 15-16/16. Differentiation only happens at S16+. Need to inject early-round upsets in value/contrarian brackets to break overlap.

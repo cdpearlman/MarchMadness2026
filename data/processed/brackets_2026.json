@@ -78,39 +78,39 @@
       "Houston"
     ],
     "expected_score": 88.38496,
-    "value_score_champion": 0.1652,
+    "value_score_champion": 1.1408839779005524,
     "upset_picks": [],
     "overlap_with_previous": null
   },
   {
     "bracket_id": 2,
     "type": "value",
-    "champion": "Duke",
+    "champion": "Texas Tech",
     "final_four": [
-      "Duke",
+      "Texas Tech",
+      "Louisville",
       "Arizona",
-      "Michigan",
       "Illinois"
     ],
     "elite_eight": [
-      "Duke",
+      "Louisville",
       "Arizona",
-      "Michigan",
+      "Texas Tech",
       "Illinois"
     ],
     "sweet_16": [
-      "Duke",
-      "Connecticut",
+      "Kansas",
+      "Louisville",
       "Arizona",
-      "Gonzaga",
-      "Michigan",
-      "Tennessee",
-      "Nebraska",
+      "Purdue",
+      "Texas Tech",
+      "Iowa St.",
+      "Vanderbilt",
       "Illinois"
     ],
     "r32": [
       "Duke",
-      "St. John's",
+      "Kansas",
       "Louisville",
       "Connecticut",
       "Arizona",
@@ -118,11 +118,11 @@
       "Gonzaga",
       "Purdue",
       "Michigan",
-      "Alabama",
-      "Tennessee",
+      "Texas Tech",
+      "Virginia",
       "Iowa St.",
       "Florida",
-      "Nebraska",
+      "Vanderbilt",
       "Illinois",
       "Houston"
     ],
@@ -136,10 +136,10 @@
       "UCLA",
       "Connecticut",
       "Arizona",
-      "Utah St.",
+      "Villanova",
       "Wisconsin",
       "Arkansas",
-      "BYU",
+      "N.C. State",
       "Gonzaga",
       "Miami FL",
       "Purdue",
@@ -149,7 +149,7 @@
       "Alabama",
       "Tennessee",
       "Virginia",
-      "Kentucky",
+      "Santa Clara",
       "Iowa St.",
       "Florida",
       "Iowa",
@@ -157,140 +157,70 @@
       "Nebraska",
       "North Carolina",
       "Illinois",
-      "Saint Mary's",
+      "Texas A&M",
       "Houston"
     ],
-    "expected_score": 84.29000000000002,
-    "value_score_champion": 0.15,
+    "expected_score": 67.87116,
+    "value_score_champion": 9.866666666666667,
     "upset_picks": [
       {
-        "round": "r64",
-        "game": "Villanova vs Utah St.",
-        "pick": "Utah St.",
-        "model_prob": 0.495192289352417,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "BYU vs N.C. State",
-        "pick": "BYU",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "Kentucky vs Santa Clara",
-        "pick": "Kentucky",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "Saint Mary's vs Texas A&M",
-        "pick": "Saint Mary's",
-        "model_prob": 0.5,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r32",
-        "game": "St. John's vs Kansas",
-        "pick": "St. John's",
-        "model_prob": 0.5,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Louisville vs Michigan St.",
-        "pick": "Louisville",
-        "model_prob": 0.4117647111415863,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Texas Tech vs Alabama",
-        "pick": "Alabama",
-        "model_prob": 0.3893129825592041,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Tennessee vs Virginia",
-        "pick": "Tennessee",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Vanderbilt vs Nebraska",
-        "pick": "Nebraska",
-        "model_prob": 0.495192289352417,
-        "public_ownership": 0.0625
-      },
-      {
         "round": "s16",
-        "game": "Gonzaga vs Purdue",
-        "pick": "Gonzaga",
-        "model_prob": 0.3588709533214569,
-        "public_ownership": 0.125
-      },
-      {
-        "round": "s16",
-        "game": "Tennessee vs Iowa St.",
-        "pick": "Tennessee",
-        "model_prob": 0.5,
-        "public_ownership": 0.125
-      },
-      {
-        "round": "s16",
-        "game": "Florida vs Nebraska",
-        "pick": "Nebraska",
+        "game": "Duke vs Kansas",
+        "pick": "Kansas",
         "model_prob": 0.3500000238418579,
-        "public_ownership": 0.125
+        "public_ownership": 0.0793
+      },
+      {
+        "round": "s16",
+        "game": "Florida vs Vanderbilt",
+        "pick": "Vanderbilt",
+        "model_prob": 0.3500000238418579,
+        "public_ownership": 0.1057
       }
     ],
-    "overlap_with_previous": 0.7538461538461538
+    "overlap_with_previous": 0.8461538461538461
   },
   {
     "bracket_id": 3,
     "type": "contrarian",
-    "champion": "Arizona",
+    "champion": "Illinois",
     "final_four": [
-      "Arizona",
-      "Duke",
-      "Michigan",
-      "Illinois"
+      "Illinois",
+      "Louisville",
+      "N.C. State",
+      "Texas Tech"
     ],
     "elite_eight": [
-      "Duke",
-      "Arizona",
-      "Michigan",
+      "Louisville",
+      "N.C. State",
+      "Texas Tech",
       "Illinois"
     ],
     "sweet_16": [
-      "Duke",
+      "Kansas",
       "Louisville",
-      "Arizona",
-      "Gonzaga",
-      "Michigan",
-      "Tennessee",
-      "Nebraska",
+      "Arkansas",
+      "N.C. State",
+      "Texas Tech",
+      "Iowa St.",
+      "Vanderbilt",
       "Illinois"
     ],
     "r32": [
       "Duke",
-      "St. John's",
+      "Kansas",
       "Louisville",
       "Connecticut",
       "Arizona",
       "Arkansas",
-      "Gonzaga",
+      "N.C. State",
       "Purdue",
       "Michigan",
-      "Alabama",
-      "Tennessee",
+      "Texas Tech",
+      "Virginia",
       "Iowa St.",
       "Florida",
-      "Nebraska",
+      "Vanderbilt",
       "Illinois",
       "Houston"
     ],
@@ -304,10 +234,10 @@
       "UCLA",
       "Connecticut",
       "Arizona",
-      "Utah St.",
+      "Villanova",
       "Wisconsin",
       "Arkansas",
-      "BYU",
+      "N.C. State",
       "Gonzaga",
       "Miami FL",
       "Purdue",
@@ -317,7 +247,7 @@
       "Alabama",
       "Tennessee",
       "Virginia",
-      "Kentucky",
+      "Santa Clara",
       "Iowa St.",
       "Florida",
       "Iowa",
@@ -325,104 +255,34 @@
       "Nebraska",
       "North Carolina",
       "Illinois",
-      "Saint Mary's",
+      "Texas A&M",
       "Houston"
     ],
-    "expected_score": 80.13632000000003,
-    "value_score_champion": 0.09762,
+    "expected_score": 61.867999999999995,
+    "value_score_champion": 7.582456140350877,
     "upset_picks": [
       {
-        "round": "r64",
-        "game": "Villanova vs Utah St.",
-        "pick": "Utah St.",
-        "model_prob": 0.495192289352417,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "BYU vs N.C. State",
-        "pick": "BYU",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "Kentucky vs Santa Clara",
-        "pick": "Kentucky",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r64",
-        "game": "Saint Mary's vs Texas A&M",
-        "pick": "Saint Mary's",
-        "model_prob": 0.5,
-        "public_ownership": 0.03125
-      },
-      {
-        "round": "r32",
-        "game": "St. John's vs Kansas",
-        "pick": "St. John's",
-        "model_prob": 0.5,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Louisville vs Michigan St.",
-        "pick": "Louisville",
-        "model_prob": 0.4117647111415863,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Texas Tech vs Alabama",
-        "pick": "Alabama",
-        "model_prob": 0.3893129825592041,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Tennessee vs Virginia",
-        "pick": "Tennessee",
-        "model_prob": 0.4951923191547394,
-        "public_ownership": 0.0625
-      },
-      {
-        "round": "r32",
-        "game": "Vanderbilt vs Nebraska",
-        "pick": "Nebraska",
-        "model_prob": 0.495192289352417,
-        "public_ownership": 0.0625
-      },
-      {
         "round": "s16",
-        "game": "Louisville vs Connecticut",
-        "pick": "Louisville",
-        "model_prob": 0.3499999940395355,
-        "public_ownership": 0.125
-      },
-      {
-        "round": "s16",
-        "game": "Gonzaga vs Purdue",
-        "pick": "Gonzaga",
-        "model_prob": 0.3588709533214569,
-        "public_ownership": 0.125
-      },
-      {
-        "round": "s16",
-        "game": "Tennessee vs Iowa St.",
-        "pick": "Tennessee",
-        "model_prob": 0.5,
-        "public_ownership": 0.125
-      },
-      {
-        "round": "s16",
-        "game": "Florida vs Nebraska",
-        "pick": "Nebraska",
+        "game": "Duke vs Kansas",
+        "pick": "Kansas",
         "model_prob": 0.3500000238418579,
-        "public_ownership": 0.125
+        "public_ownership": 0.0793
+      },
+      {
+        "round": "s16",
+        "game": "Arizona vs Arkansas",
+        "pick": "Arkansas",
+        "model_prob": 0.3500000238418579,
+        "public_ownership": 0.1086
+      },
+      {
+        "round": "s16",
+        "game": "Florida vs Vanderbilt",
+        "pick": "Vanderbilt",
+        "model_prob": 0.3500000238418579,
+        "public_ownership": 0.1057
       }
     ],
-    "overlap_with_previous": 0.9384615384615385
+    "overlap_with_previous": 0.8769230769230769
   }
 ]
