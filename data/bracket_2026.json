@@ -1,0 +1,48 @@
+{
+  "regions": {
+    "East": {
+      "1": "Duke", "16": "Siena",
+      "8": "Ohio St.", "9": "TCU",
+      "5": "St. John's", "12": "Northern Iowa",
+      "4": "Kansas", "13": "Cal Baptist",
+      "6": "Louisville", "11": "South Florida",
+      "3": "Michigan St.", "14": "North Dakota St.",
+      "7": "UCLA", "10": "UCF",
+      "2": "Connecticut", "15": "Furman"
+    },
+    "Midwest": {
+      "1": "Michigan", "16": "TBD_UMBC_Howard",
+      "8": "Georgia", "9": "Saint Louis",
+      "5": "Texas Tech", "12": "Akron",
+      "4": "Alabama", "13": "Hofstra",
+      "6": "Tennessee", "11": "TBD_Miami OH_SMU",
+      "3": "Virginia", "14": "Wright St.",
+      "7": "Kentucky", "10": "Santa Clara",
+      "2": "Iowa St.", "15": "Tennessee St."
+    },
+    "South": {
+      "1": "Florida", "16": "TBD_Prairie View A&M_Lehigh",
+      "8": "Clemson", "9": "Iowa",
+      "5": "Vanderbilt", "12": "McNeese St.",
+      "4": "Nebraska", "13": "Troy",
+      "6": "North Carolina", "11": "VCU",
+      "3": "Illinois", "14": "Penn",
+      "7": "Saint Mary's", "10": "Texas A&M",
+      "2": "Houston", "15": "Idaho"
+    },
+    "West": {
+      "1": "Arizona", "16": "LIU",
+      "8": "Villanova", "9": "Utah St.",
+      "5": "Wisconsin", "12": "High Point",
+      "4": "Arkansas", "13": "Hawaii",
+      "6": "BYU", "11": "TBD_Texas_N.C. State",
+      "3": "Gonzaga", "14": "Kennesaw St.",
+      "7": "Miami FL", "10": "Missouri",
+      "2": "Purdue", "15": "Queens"
+    }
+  },
+  "final_four_matchups": [
+    ["East", "West"],
+    ["Midwest", "South"]
+  ]
+}

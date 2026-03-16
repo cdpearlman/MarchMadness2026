@@ -1,0 +1,17 @@
+{
+  "note": "UPDATE WITH REAL OWNERSHIP DATA FROM ESPN/YAHOO BEFORE BRACKETS LOCK",
+  "champion": {
+    "Duke": 0.25,
+    "Michigan": 0.18,
+    "Arizona": 0.15,
+    "Florida": 0.10,
+    "Houston": 0.08,
+    "Iowa St.": 0.06,
+    "Connecticut": 0.05,
+    "Purdue": 0.04
+  },
+  "final_four": {},
+  "elite_eight": {},
+  "sweet_16": {},
+  "r32": {}
+}
