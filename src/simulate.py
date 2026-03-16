@@ -1,26 +1,6 @@
 """
-Monte Carlo bracket simulator for March Madness.
-
-This module:
-  1. Takes a 68-team bracket definition (team name, seed, region)
-  2. Uses predict.py's predict_matchup() to get win probabilities for every matchup
-  3. Runs N Monte Carlo simulations to get each team's probability of reaching each round
-  4. Generates optimized brackets using multiple strategies:
-       - Greedy (maximize expected score)
-       - Upset specials (follow high-upside underdogs deep)
-       - Diverse variants (swapped Final Four / champion picks)
-
-Scoring (NCAA.com standard):
-  Round of 64:   1 pt
-  Round of 32:   2 pts
-  Sweet 16:      4 pts
-  Elite Eight:   8 pts
-  Final Four:   16 pts
-  Championship: 32 pts
-
-Usage:
-  python src/simulate.py --season 2025 --n-sims 10000 --n-brackets 5
-  python src/simulate.py --bracket-file bracket.json --n-sims 10000
+Monte Carlo Tournament Simulator
+Propagates per-game win probabilities through the bracket.
 """
 
 from __future__ import annotations
@@ -28,12 +8,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import random
-from collections import defaultdict
-from copy import deepcopy
 from pathlib import Path
-from typing import Optional
-
+import time
 import numpy as np
 import pandas as pd
 import warnings
@@ -41,1190 +17,297 @@ warnings.filterwarnings("ignore")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import config
-from data_prep import load_team_stats, build_training_data
-from feature_engineering import prepare_features
-from models import train_final_models
-from predict import predict_matchup, load_models, save_models, get_tournament_teams
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-ROUND_POINTS = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32}
-ROUND_NAMES  = {1: "R64", 2: "R32", 3: "S16", 4: "E8", 5: "F4", 6: "Champ"}
-
-# Standard 4-region bracket structure: (region, seed_matchups)
-REGIONS = ["East", "West", "South", "Midwest"]
-
-# First Four play-in games (lowest seeds): handled separately if present
-FIRST_FOUR_SEEDS = [11, 16]  # seeds that typically have play-in games
-
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
-class Team:
-    """Represents a tournament team."""
-    def __init__(self, name: str, seed: int, region: str, stats: pd.Series):
-        self.name = name
-        self.seed = seed
-        self.region = region
-        self.stats = stats  # row from team_stats DataFrame
-
-    def __repr__(self):
-        return f"#{self.seed} {self.name} ({self.region})"
-
-
-class Bracket:
-    """
-    Represents a filled-out bracket.
-    Stores picks as a dict: round -> list of team names that win that round.
-    """
-    def __init__(self, strategy_name: str = ""):
-        self.strategy_name = strategy_name
-        # picks[round] = list of team names predicted to win that round
-        self.picks: dict[int, list[str]] = {r: [] for r in range(1, 7)}
-        self.expected_score: float = 0.0
-        self.notes: list[str] = []
-
-    def score_against(self, actual_results: dict[int, list[str]]) -> int:
-        """Score this bracket against actual tournament results."""
-        total = 0
-        for round_num, winners in actual_results.items():
-            pts = ROUND_POINTS[round_num]
-            for team in self.picks.get(round_num, []):
-                if team in winners:
-                    total += pts
-        return total
-
-    def to_dict(self) -> dict:
-        return {
-            "strategy": self.strategy_name,
-            "expected_score": round(self.expected_score, 2),
-            "notes": self.notes,
-            "picks": self.picks,
-        }
-
-
-# ---------------------------------------------------------------------------
-# Probability cache
-# ---------------------------------------------------------------------------
-
-class MatchupCache:
-    """Caches win probability lookups to avoid repeated model calls."""
-
-    def __init__(self, models: dict, scaler, feature_cols: list[str],
-                 calibrators: dict | None = None):
-        self.models = models
-        self.scaler = scaler
-        self.feature_cols = feature_cols
-        self.calibrators = calibrators
-        self._cache: dict[tuple, float] = {}
-
-    def win_prob(self, team_a: Team, team_b: Team) -> float:
-        """Return P(team_a beats team_b)."""
-        key = (team_a.name, team_b.name)
-        if key not in self._cache:
-            result = predict_matchup(
-                team_a.stats, team_b.stats,
-                self.models, self.scaler, self.feature_cols,
-                calibrators=self.calibrators,
-            )
-            p = result["win_prob_a_ensemble"]
-            self._cache[key] = p
-            self._cache[(team_b.name, team_a.name)] = 1.0 - p
-        return self._cache[key]
-
-
-# ---------------------------------------------------------------------------
-# Bracket structure builder
-# ---------------------------------------------------------------------------
-
-def build_teams_from_stats(stats: pd.DataFrame, season: int) -> list[Team]:
-    """Build Team objects from team_stats for a given season."""
-    tourney = get_tournament_teams(stats, season)
-    teams = []
-    for _, row in tourney.iterrows():
-        name = row.get(config.STATS_TEAM_NAME_COL, f"Team_{row['SeedNum']}")
-        seed = int(row["SeedNum"])
-        region = row.get("Region", "Unknown")
-        teams.append(Team(name=name, seed=seed, region=region, stats=row))
-    return teams
-
-
-def group_teams_by_region(teams: list[Team]) -> dict[str, list[Team]]:
-    """Group teams by region, sorted by seed."""
-    regions: dict[str, list[Team]] = defaultdict(list)
-    for t in teams:
-        regions[t.region].append(t)
-    for r in regions:
-        regions[r].sort(key=lambda t: t.seed)
-    return dict(regions)
-
-
-def get_first_round_matchups(region_teams: list[Team]) -> list[tuple[Team, Team]]:
-    """
-    Pair teams into first-round matchups using standard NCAA seeding:
-    1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
-    (bracket order matters for subsequent rounds)
-    """
-    seed_order = [(1,16), (8,9), (5,12), (4,13), (6,11), (3,14), (7,10), (2,15)]
-    by_seed: dict[int, Team] = {t.seed: t for t in region_teams}
-    matchups = []
-    for s_a, s_b in seed_order:
-        if s_a in by_seed and s_b in by_seed:
-            matchups.append((by_seed[s_a], by_seed[s_b]))
-    return matchups
-
-
-# ---------------------------------------------------------------------------
-# Single simulation
-# ---------------------------------------------------------------------------
-
-def simulate_tournament_once(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],  # (region_name_a, region_name_b)
-    cache: MatchupCache,
-    rng: random.Random,
-) -> dict[int, list[str]]:
-    """
-    Simulate one full tournament. Returns dict: round -> list of winners.
-    Regions: 4 regions x 4 rounds = rounds 1-4.
-    Final Four = round 5, Championship = round 6.
-    """
-    results: dict[int, list[str]] = {r: [] for r in range(1, 7)}
-
-    # region_bracket[region] = list of Teams advancing from each round
-    region_survivors: dict[str, list[Team]] = {}
-
-    for region, matchups in region_matchups.items():
-        survivors = list(matchups)  # list of (Team, Team) pairs for round 1
-
-        for round_num in range(1, 5):  # rounds 1-4 within region
-            next_round: list[tuple[Team, Team]] = []
-            round_winners: list[Team] = []
-
-            for team_a, team_b in survivors:
-                p = cache.win_prob(team_a, team_b)
-                winner = team_a if rng.random() < p else team_b
-                round_winners.append(winner)
-                results[round_num].append(winner.name)
-
-            # Pair winners for next round (bracket order preserved)
-            for i in range(0, len(round_winners), 2):
-                if i + 1 < len(round_winners):
-                    next_round.append((round_winners[i], round_winners[i+1]))
-
-            survivors = next_round
-
-        # Regional champion = last survivor
-        if round_winners:
-            region_survivors[region] = round_winners[-1]
-
-    # Final Four (round 5)
-    final_four_teams: list[Team] = []
-    for region_a, region_b in final_four_matchups:
-        team_a = region_survivors.get(region_a)
-        team_b = region_survivors.get(region_b)
-        if team_a and team_b:
-            p = cache.win_prob(team_a, team_b)
-            winner = team_a if rng.random() < p else team_b
-            final_four_teams.append(winner)
-            results[5].append(winner.name)
-
-    # Championship (round 6)
-    if len(final_four_teams) == 2:
-        team_a, team_b = final_four_teams
-        p = cache.win_prob(team_a, team_b)
-        winner = team_a if rng.random() < p else team_b
-        results[6].append(winner.name)
-
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Monte Carlo runner
-# ---------------------------------------------------------------------------
-
-def run_monte_carlo(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],
-    cache: MatchupCache,
-    n_sims: int = 10000,
-    seed: int = 42,
-) -> dict[str, dict[int, float]]:
-    """
-    Run n_sims simulations. Returns:
-      reach_probs[team_name][round] = probability of reaching that round
-    """
-    rng = random.Random(seed)
-    reach_counts: dict[str, dict[int, int]] = defaultdict(lambda: defaultdict(int))
-
-    print(f"  Running {n_sims:,} simulations...")
-    for i in range(n_sims):
-        sim_result = simulate_tournament_once(
-            region_matchups, final_four_matchups, cache, rng
-        )
-        for round_num, winners in sim_result.items():
-            for team in winners:
-                reach_counts[team][round_num] += 1
-
-    # Convert to probabilities
-    reach_probs: dict[str, dict[int, float]] = {}
-    for team, rounds in reach_counts.items():
-        reach_probs[team] = {r: rounds[r] / n_sims for r in range(1, 7)}
-
-    return reach_probs
-
-
-# ---------------------------------------------------------------------------
-# Expected score computation
-# ---------------------------------------------------------------------------
-
-def expected_score_for_pick(team_name: str, round_num: int,
-                             reach_probs: dict[str, dict[int, float]]) -> float:
-    """Expected points from picking team_name to win round_num."""
-    p = reach_probs.get(team_name, {}).get(round_num, 0.0)
-    return p * ROUND_POINTS[round_num]
-
-
-# ---------------------------------------------------------------------------
-# Bracket generation strategies
-# ---------------------------------------------------------------------------
-
-def pick_winner_by_ev(
-    team_a: Team, team_b: Team, round_num: int,
-    reach_probs: dict[str, dict[int, float]]
-) -> Team:
-    """Pick whoever has higher expected value for this round."""
-    ev_a = expected_score_for_pick(team_a.name, round_num, reach_probs)
-    ev_b = expected_score_for_pick(team_b.name, round_num, reach_probs)
-    return team_a if ev_a >= ev_b else team_b
-
-
-def apply_temperature(p: float, temperature: float) -> float:
-    """
-    Soften or sharpen a win probability using temperature scaling.
-    temperature=0.0  → greedy (returns 1.0 if p>=0.5 else 0.0)
-    temperature=1.0  → pure probability (returns p unchanged)
-    temperature>1.0  → flatter than raw prob (more chaos)
-
-    Formula: p_adj = p^(1/T) / (p^(1/T) + (1-p)^(1/T))
-    """
-    if temperature <= 0.0:
-        return 1.0 if p >= 0.5 else 0.0
-    inv_t = 1.0 / temperature
-    pa = p ** inv_t
-    pb = (1.0 - p) ** inv_t
-    denom = pa + pb
-    return pa / denom if denom > 0 else 0.5
-
-
-def simulate_bracket_with_temperature(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],
-    cache: MatchupCache,
-    temperature: float,
-    rng: random.Random,
-    forced_round1_winners: Optional[dict[str, str]] = None,
-    upset_team_boost: float = 0.3,
-    forced_champion: Optional[str] = None,
-    forced_regional_winners: Optional[dict[str, str]] = None,
-) -> Bracket:
-    """
-    Generate a bracket by simulating game-by-game in bracket order.
-    Each matchup's winner is sampled from a temperature-adjusted probability.
-
-    temperature=0.0 -> always pick the favourite (greedy)
-    temperature=0.5 -> moderate upset friendliness
-    temperature=1.0 -> pure model probability
-    temperature=1.5 -> heavy chaos
-
-    forced_round1_winners: dict mapping loser_name -> winner_name for
-    specific round-1 upsets to force (e.g. {"Memphis": "Colorado State"}).
-
-    upset_team_boost: when a forced upset team plays in later rounds, add this
-    to their win probability before temperature adjustment (capped at 0.95).
-    Ensures the Cinderella team has a real chance to keep advancing.
-
-    forced_champion: team name that MUST win every matchup on their path
-    through the bracket (R1 through championship). All other matchups are
-    sampled normally with temperature.
-
-    forced_regional_winners: dict mapping region_name -> team_name. The
-    specified team MUST win every matchup within their region (like
-    forced_champion but region-scoped). Used for F4 diversity.
-    """
-    bracket = Bracket()
-    region_champions: dict[str, Team] = {}
-    forced = forced_round1_winners or {}
-    hot_teams: set[str] = set(forced.values())
-    forced_regionals = forced_regional_winners or {}
-
-    for region, matchups in region_matchups.items():
-        current_round_pairs = list(matchups)
-        region_forced = forced_regionals.get(region)
-
-        for round_num in range(1, 5):
-            round_winners: list[Team] = []
-
-            for team_a, team_b in current_round_pairs:
-                if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
-                    winner = team_a if team_a.name == forced_champion else team_b
-                elif region_forced and (team_a.name == region_forced or team_b.name == region_forced):
-                    winner = team_a if team_a.name == region_forced else team_b
-                elif round_num == 1 and team_a.name in forced:
-                    winner_name = forced[team_a.name]
-                    winner = team_a if team_a.name == winner_name else team_b
-                elif round_num == 1 and team_b.name in forced:
-                    winner_name = forced[team_b.name]
-                    winner = team_b if team_b.name == winner_name else team_a
-                else:
-                    p_raw = cache.win_prob(team_a, team_b)
-                    if team_a.name in hot_teams:
-                        p_raw = min(p_raw + upset_team_boost, 0.95)
-                    elif team_b.name in hot_teams:
-                        p_raw = max(p_raw - upset_team_boost, 0.05)
-                    p_adj = apply_temperature(p_raw, temperature)
-                    winner = team_a if rng.random() < p_adj else team_b
-
-                round_winners.append(winner)
-                bracket.picks[round_num].append(winner.name)
-
-            next_pairs = []
-            for i in range(0, len(round_winners), 2):
-                if i + 1 < len(round_winners):
-                    next_pairs.append((round_winners[i], round_winners[i + 1]))
-            current_round_pairs = next_pairs
-
-        if round_winners:
-            region_champions[region] = round_winners[-1]
-
-    # Final Four (round 5)
-    final_four_teams: list[Team] = []
-    for region_a, region_b in final_four_matchups:
-        team_a = region_champions.get(region_a)
-        team_b = region_champions.get(region_b)
-        if team_a and team_b:
-            if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
-                winner = team_a if team_a.name == forced_champion else team_b
-            else:
-                p_raw = cache.win_prob(team_a, team_b)
-                if team_a.name in hot_teams:
-                    p_raw = min(p_raw + upset_team_boost, 0.95)
-                elif team_b.name in hot_teams:
-                    p_raw = max(p_raw - upset_team_boost, 0.05)
-                p_adj = apply_temperature(p_raw, temperature)
-                winner = team_a if rng.random() < p_adj else team_b
-            final_four_teams.append(winner)
-            bracket.picks[5].append(winner.name)
-
-    # Championship (round 6)
-    if len(final_four_teams) == 2:
-        team_a, team_b = final_four_teams
-        if forced_champion and (team_a.name == forced_champion or team_b.name == forced_champion):
-            winner = team_a if team_a.name == forced_champion else team_b
-        else:
-            p_raw = cache.win_prob(team_a, team_b)
-            if team_a.name in hot_teams:
-                p_raw = min(p_raw + upset_team_boost, 0.95)
-            elif team_b.name in hot_teams:
-                p_raw = max(p_raw - upset_team_boost, 0.05)
-            p_adj = apply_temperature(p_raw, temperature)
-            winner = team_a if rng.random() < p_adj else team_b
-        bracket.picks[6].append(winner.name)
-
-    return bracket
-
-
-def generate_sampled_bracket(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],
-    reach_probs: dict[str, dict[int, float]],
-    cache: MatchupCache,
-    temperature: float,
-    rng_seed: int,
-    forced_round1_winners: Optional[dict[str, str]] = None,
-    strategy_name: str = "",
-    notes: Optional[list[str]] = None,
-) -> Bracket:
-    """
-    Generate a bracket by sampling with temperature control.
-    Computes expected score after generation using reach_probs.
-    """
-    rng = random.Random(rng_seed)
-    bracket = simulate_bracket_with_temperature(
-        region_matchups, final_four_matchups, cache,
-        temperature, rng, forced_round1_winners
-    )
-    bracket.strategy_name = strategy_name
-    bracket.notes = notes or []
-    bracket.expected_score = sum(
-        expected_score_for_pick(team, r, reach_probs)
-        for r, teams in bracket.picks.items()
-        for team in teams
-    )
-    return bracket
-
-
-def generate_greedy_bracket(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],
-    reach_probs: dict[str, dict[int, float]],
-    all_teams_by_name: dict[str, Team],
-    cache: MatchupCache,
-    forced_champion: Optional[str] = None,
-    forced_final_four: Optional[list[str]] = None,
-) -> Bracket:
-    """
-    Generate a bracket by greedily picking the higher-EV team at each matchup.
-    Optionally force a specific champion or Final Four picks.
-
-    forced_final_four: list of team names that MUST win their region (reach F4).
-    forced_champion: team name that MUST win the championship.
-    If a forced team can't physically reach the forced slot (already eliminated
-    by another forced pick or not in the bracket), falls back to EV.
-    """
-    bracket = Bracket()
-    region_champions: dict[str, Team] = {}
-
-    # Build a set of all forced deep teams (union of forced_final_four + champion)
-    forced_deep: set[str] = set()
-    if forced_final_four:
-        forced_deep.update(forced_final_four)
-    if forced_champion:
-        forced_deep.add(forced_champion)
-
-    for region, matchups in region_matchups.items():
-        survivors = list(matchups)
-        # Determine if a forced team lives in this region
-        region_team_names = {t.name for pair in matchups for t in pair}
-        forced_in_region = forced_deep & region_team_names
-
-        for round_num in range(1, 5):
-            next_round: list[tuple[Team, Team]] = []
-            round_winners: list[Team] = []
-
-            for team_a, team_b in survivors:
-                # Force the pick if one of the forced teams is in this matchup
-                if forced_in_region:
-                    if team_a.name in forced_in_region:
-                        winner = team_a
-                    elif team_b.name in forced_in_region:
-                        winner = team_b
-                    else:
-                        winner = pick_winner_by_ev(team_a, team_b, round_num, reach_probs)
-                else:
-                    winner = pick_winner_by_ev(team_a, team_b, round_num, reach_probs)
-
-                round_winners.append(winner)
-                bracket.picks[round_num].append(winner.name)
-
-            for i in range(0, len(round_winners), 2):
-                if i + 1 < len(round_winners):
-                    next_round.append((round_winners[i], round_winners[i+1]))
-
-            survivors = next_round
-
-        if round_winners:
-            region_champions[region] = round_winners[-1]
-
-    # Final Four
-    final_four_winners: list[Team] = []
-    for region_a, region_b in final_four_matchups:
-        team_a = region_champions.get(region_a)
-        team_b = region_champions.get(region_b)
-        if team_a and team_b:
-            # Force the pick if champion must come through this semifinal
-            if forced_champion and team_a.name == forced_champion:
-                winner = team_a
-            elif forced_champion and team_b.name == forced_champion:
-                winner = team_b
-            else:
-                winner = pick_winner_by_ev(team_a, team_b, 5, reach_probs)
-            final_four_winners.append(winner)
-            bracket.picks[5].append(winner.name)
-
-    # Championship
-    if len(final_four_winners) == 2:
-        team_a, team_b = final_four_winners
-        if forced_champion and team_a.name == forced_champion:
-            winner = team_a
-        elif forced_champion and team_b.name == forced_champion:
-            winner = team_b
-        else:
-            winner = pick_winner_by_ev(team_a, team_b, 6, reach_probs)
-        bracket.picks[6].append(winner.name)
-
-    # Compute expected score
-    bracket.expected_score = sum(
-        expected_score_for_pick(team, r, reach_probs)
-        for r, teams in bracket.picks.items()
-        for team in teams
-    )
-
-    return bracket
-
-
-def get_top_upset_candidates(
-    reach_probs: dict[str, dict[int, float]],
-    all_teams_by_name: dict[str, Team],
-    round_threshold: int = 4,  # Elite Eight and beyond
-    min_seed: int = 6,         # Only consider seeds 6+
-    top_n: int = 5,
-) -> list[tuple[Team, float]]:
-    """
-    Find teams with meaningful deep-run probability despite high seed number.
-    Returns list of (Team, probability_of_reaching_round_threshold).
-    """
-    candidates = []
-    for name, probs in reach_probs.items():
-        team = all_teams_by_name.get(name)
-        if team and team.seed >= min_seed:
-            deep_run_prob = probs.get(round_threshold, 0.0)
-            if deep_run_prob > 0.05:  # at least 5% chance of Elite Eight
-                candidates.append((team, deep_run_prob))
-    candidates.sort(key=lambda x: x[1], reverse=True)
-    return candidates[:top_n]
-
-
-# ---------------------------------------------------------------------------
-# Upset candidate detection
-# ---------------------------------------------------------------------------
-
-def get_upset_candidates_for_bracket(
-    reach_probs: dict[str, dict[int, float]],
-    all_teams_by_name: dict[str, Team],
-    min_seed: int = 5,
-    min_e8_prob: float = 0.05,
-    min_r32_prob: float = 0.25,
-) -> list[Team]:
-    """
-    Return high-seeded teams with meaningful deep-run probability.
-    Sorted by composite score: champ_prob + e8_prob * 0.3.
-    """
-    candidates = []
-    for name, probs in reach_probs.items():
-        team = all_teams_by_name.get(name)
-        if not team or team.seed < min_seed:
-            continue
-        e8_prob = probs.get(4, 0.0)
-        r32_prob = probs.get(2, 0.0)
-        champ_prob = probs.get(6, 0.0)
-        if e8_prob >= min_e8_prob or r32_prob >= min_r32_prob:
-            candidates.append((team, champ_prob, e8_prob, r32_prob))
-    candidates.sort(key=lambda x: x[1] + x[2] * 0.3 + x[3] * 0.1, reverse=True)
-    return [t for t, _, _, _ in candidates]
-
-
-def get_best_round1_upset(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    cache: MatchupCache,
-    min_seed_gap: int = 4,
-) -> Optional[dict[str, str]]:
-    """
-    Find the single strongest first-round upset opportunity across all regions.
-    Returns forced_round1_winners dict: {loser_name: winner_name}.
-    min_seed_gap: only consider matchups where winner is at least this many
-    seeds higher (e.g. 12 beats 5 → gap of 7).
-    """
-    best = None
-    best_score = 0.0  # higher seed wins with meaningful probability
-
-    for region, matchups in region_matchups.items():
-        for team_a, team_b in matchups:
-            # team_a is always lower seed (home) in our bracket format
-            p_a_wins = cache.win_prob(team_a, team_b)
-            p_upset = 1.0 - p_a_wins  # prob higher seed (team_b) wins
-            seed_gap = team_b.seed - team_a.seed
-
-            if seed_gap >= min_seed_gap and p_upset >= 0.25:
-                # Score = upset probability weighted by seed gap (bigger upset = more valuable)
-                score = p_upset * (seed_gap / 10.0)
-                if score > best_score:
-                    best_score = score
-                    # Force team_b (the underdog) to win
-                    best = {team_a.name: team_b.name}
-
-    return best
-
-
-# ---------------------------------------------------------------------------
-# Bracket diversity metric
-# ---------------------------------------------------------------------------
-
-def compute_bracket_diversity(brackets: list[Bracket]) -> dict:
-    """
-    Compute pairwise pick overlap between all brackets.
-    overlap(A, B) = shared picks / total possible picks (63 games).
-    Returns matrix as dict and summary stats.
-    """
-    n = len(brackets)
-    overlaps = {}
-    all_overlaps = []
-
-    for i in range(n):
-        for j in range(i + 1, n):
-            picks_i = set(
-                f"r{r}:{team}"
-                for r, teams in brackets[i].picks.items()
-                for team in teams
-            )
-            picks_j = set(
-                f"r{r}:{team}"
-                for r, teams in brackets[j].picks.items()
-                for team in teams
-            )
-            total = max(len(picks_i | picks_j), 1)
-            overlap = len(picks_i & picks_j) / total
-            overlaps[f"B{i+1}_vs_B{j+1}"] = round(overlap, 3)
-            all_overlaps.append(overlap)
-
-    return {
-        "pairwise": overlaps,
-        "mean_overlap": round(sum(all_overlaps) / len(all_overlaps), 3) if all_overlaps else 1.0,
-        "min_overlap": round(min(all_overlaps), 3) if all_overlaps else 1.0,
-    }
-
-
-def print_diversity_report(diversity: dict, brackets: list[Bracket]) -> None:
-    n = len(brackets)
-    print(f"\n  {'='*60}")
-    print(f"  BRACKET DIVERSITY REPORT")
-    print(f"  {'='*60}")
-    print(f"  Mean pairwise overlap: {diversity['mean_overlap']:.1%}")
-    print(f"  Min pairwise overlap:  {diversity['min_overlap']:.1%}")
-    if diversity['mean_overlap'] > 0.80:
-        print(f"  [!] Brackets are very similar (>80% overlap). Consider raising temperature.")
-    print()
-    # Header
-    header = f"  {'':12}" + "".join(f"  B{j+1:>4}" for j in range(n))
-    print(header)
-    for i in range(n):
-        row = f"  B{i+1} {brackets[i].strategy_name[:10]:<10}"
-        for j in range(n):
-            if i == j:
-                row += f"  {'---':>5}"
-            else:
-                key = f"B{min(i,j)+1}_vs_B{max(i,j)+1}"
-                v = diversity['pairwise'].get(key, 0)
-                row += f"  {v:.0%}"
-        print(row)
-
-
-# ---------------------------------------------------------------------------
-# Main bracket generation
-# ---------------------------------------------------------------------------
-
-def generate_all_brackets(
-    region_matchups: dict[str, list[tuple[Team, Team]]],
-    final_four_matchups: list[tuple[str, str]],
-    reach_probs: dict[str, dict[int, float]],
-    all_teams_by_name: dict[str, Team],
-    cache: MatchupCache,
-    n_brackets: int = 5,
-) -> list[Bracket]:
-    """
-    Generate n_brackets using a mix of strategies:
-      B1: Greedy EV (temperature=0) — chalk, highest floor
-      B2: Alt chalk (temperature=0, #2 champion) — second-most-likely winner
-      B3: Balanced sampling (temperature=0.5) — realistic, moderate variance
-      B4: Chaos (temperature=1.2) — high variance, heavy upset potential
-      B5: Coherent upset path — force top round-1 upset, sample rest at temp=0.6
-    """
-    brackets = []
-    upset_candidates = get_upset_candidates_for_bracket(reach_probs, all_teams_by_name)
-    champ_probs_sorted = sorted(reach_probs.items(), key=lambda x: x[1].get(6, 0), reverse=True)
-    top_champs = [name for name, _ in champ_probs_sorted]
-
-    # --- Bracket 1: Pure greedy (temperature=0) ---
-    b1 = generate_sampled_bracket(
-        region_matchups, final_four_matchups, reach_probs, cache,
-        temperature=0.0, rng_seed=42,
-        strategy_name="Greedy EV (chalk)",
-        notes=["temperature=0: always picks the favourite",
-               "Highest floor, lowest variance"]
-    )
-    brackets.append(b1)
-    if n_brackets < 2:
-        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
-
-    # --- Bracket 2: Alt chalk — force #2 champion, greedy everywhere else ---
-    greedy_champ = b1.picks[6][0] if b1.picks[6] else ""
-    alt_champ = next((n for n in top_champs if n != greedy_champ), greedy_champ)
-    b2 = generate_greedy_bracket(
-        region_matchups, final_four_matchups, reach_probs,
-        all_teams_by_name, cache,
-        forced_champion=alt_champ
-    )
-    b2.strategy_name = f"Alt Chalk: {alt_champ} wins"
-    b2.notes = [
-        f"Greedy everywhere, champion forced to {alt_champ}",
-        f"Championship probability: {reach_probs.get(alt_champ, {}).get(6, 0):.1%}",
-    ]
-    brackets.append(b2)
-    if n_brackets < 3:
-        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
-
-    # --- Bracket 3: Balanced sampling (temperature=0.5) ---
-    b3 = generate_sampled_bracket(
-        region_matchups, final_four_matchups, reach_probs, cache,
-        temperature=0.5, rng_seed=137,
-        strategy_name="Balanced (temp=0.5)",
-        notes=["temperature=0.5: respects model signal but allows upsets",
-               "Good balance of floor and variance"]
-    )
-    brackets.append(b3)
-    if n_brackets < 4:
-        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
-
-    # --- Bracket 4: Chaos (temperature=1.2) ---
-    b4 = generate_sampled_bracket(
-        region_matchups, final_four_matchups, reach_probs, cache,
-        temperature=1.2, rng_seed=999,
-        strategy_name="Chaos (temp=1.2)",
-        notes=["temperature=1.2: probabilities flattened toward 50/50",
-               "Highest variance — captures low-probability deep runs"]
-    )
-    brackets.append(b4)
-    if n_brackets < 5:
-        return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
-
-    # --- Bracket 5: Coherent upset path ---
-    # Find the best first-round upset and force it, then sample the rest
-    forced_upset = get_best_round1_upset(region_matchups, cache)
-    if forced_upset:
-        winner_name = list(forced_upset.values())[0]
-        loser_name  = list(forced_upset.keys())[0]
-        upset_team  = all_teams_by_name.get(winner_name)
-        upset_seed  = upset_team.seed if upset_team else "?"
-
-        # Find a seed where the upset team advances at least to R2
-        # Try seeds until we find one where the Cinderella makes the Sweet 16
-        # (or fall back after 50 attempts)
-        best_seed = 777
-        best_rounds = 1
-        for trial_seed in range(777, 777 + 200, 7):
-            rng_trial = random.Random(trial_seed)
-            trial = simulate_bracket_with_temperature(
-                region_matchups, final_four_matchups, cache,
-                temperature=0.6, rng=rng_trial,
-                forced_round1_winners=forced_upset,
-                upset_team_boost=0.3,
-            )
-            rounds_advanced = max(
-                (int(r) for r, teams in trial.picks.items() if winner_name in teams),
-                default=0
-            )
-            if rounds_advanced > best_rounds:
-                best_rounds = rounds_advanced
-                best_seed = trial_seed
-            if rounds_advanced >= 3:  # Sweet 16 or beyond — good enough
-                break
-
-        b5 = generate_sampled_bracket(
-            region_matchups, final_four_matchups, reach_probs, cache,
-            temperature=0.6, rng_seed=best_seed,
-            forced_round1_winners=forced_upset,
-            strategy_name=f"Upset Path: #{upset_seed} {winner_name}",
-            notes=[
-                f"Forces {winner_name} (#{upset_seed}) over {loser_name} in round 1",
-                f"Upset team boosted in subsequent rounds (upset_boost=+0.3)",
-                f"Advances to round {best_rounds} in this bracket",
-            ]
-        )
-    else:
-        # Fallback: no strong upset found, use high temp
-        b5 = generate_sampled_bracket(
-            region_matchups, final_four_matchups, reach_probs, cache,
-            temperature=1.5, rng_seed=777,
-            strategy_name="High Variance (temp=1.5)",
-            notes=["No strong upset opportunity found", "High variance fallback"]
-        )
-    brackets.append(b5)
-
-    return _finalize(brackets, region_matchups, final_four_matchups, reach_probs, cache)
-
-
-def _finalize(
-    brackets: list[Bracket],
-    region_matchups, final_four_matchups, reach_probs, cache
-) -> list[Bracket]:
-    """Compute diversity and attach to brackets list."""
-    # Recompute expected scores (already done, but verify)
-    for b in brackets:
-        if b.expected_score == 0.0:
-            b.expected_score = sum(
-                expected_score_for_pick(team, r, reach_probs)
-                for r, teams in b.picks.items()
-                for team in teams
-            )
-    return brackets
-
-
-# ---------------------------------------------------------------------------
-# Reporting
-# ---------------------------------------------------------------------------
-
-def print_reach_probs(reach_probs: dict[str, dict[int, float]],
-                      all_teams_by_name: dict[str, Team],
-                      top_n: int = 20) -> None:
-    """Print top teams by championship probability."""
-    champ_probs = [
-        (name, probs.get(6, 0.0), probs.get(5, 0.0), probs.get(4, 0.0),
-         all_teams_by_name.get(name, Team("?", 0, "?", pd.Series())).seed)
-        for name, probs in reach_probs.items()
-    ]
-    champ_probs.sort(key=lambda x: x[1], reverse=True)
-
-    print(f"\n  {'='*75}")
-    print(f"  {'Team':<28} {'Seed':>4}  {'R64':>6} {'R32':>6} {'S16':>6} {'E8':>6} {'F4':>6} {'Champ':>6}")
-    print(f"  {'='*75}")
-    for name, champ, f4, e8, seed in champ_probs[:top_n]:
-        probs = reach_probs[name]
-        print(
-            f"  {name:<28} #{seed:<3}  "
-            f"{probs.get(1,0):>5.1%} {probs.get(2,0):>6.1%} {probs.get(3,0):>6.1%} "
-            f"{probs.get(4,0):>6.1%} {probs.get(5,0):>6.1%} {probs.get(6,0):>6.1%}"
-        )
-
-
-def print_bracket(bracket: Bracket) -> None:
-    """Pretty-print a bracket's picks by round."""
-    print(f"\n  Strategy: {bracket.strategy_name}")
-    print(f"  Expected Score: {bracket.expected_score:.1f}")
-    for note in bracket.notes:
-        if note:
-            print(f"  Note: {note}")
-    print()
-    for round_num in range(1, 7):
-        teams = bracket.picks.get(round_num, [])
-        label = ROUND_NAMES[round_num]
-        print(f"    {label} ({ROUND_POINTS[round_num]}pt): {', '.join(teams) if teams else '—'}")
-
-
-# ---------------------------------------------------------------------------
-# Bracket file loader (hard-coded bracket input)
-# ---------------------------------------------------------------------------
-
-def load_bracket_file(path: str) -> dict:
-    """
-    Load a bracket definition from JSON.
-
-    Format: see data/bracket_YYYY.json for full example.
-    {
-      "season": 2026,
-      "final_four_matchups": [["South", "West"], ["Midwest", "East"]],
-      "regions": {
-        "East": {
-          "matchups": [
-            {"home": {"name": "Duke", "seed": 1}, "away": {"name": "Vermont", "seed": 16}},
-            ...  (8 matchups per region, in bracket order)
-          ]
-        },
-        ...
-      }
-    }
-    """
-    with open(path) as f:
+from data_prep import load_team_stats
+from predict import load_models, predict_matchup
+
+def load_bracket(path: str | Path) -> dict:
+    with open(path, "r") as f:
         return json.load(f)
 
+def extract_teams_from_bracket(bracket: dict) -> list[str]:
+    teams = []
+    for region, seeds in bracket["regions"].items():
+        for seed, team in seeds.items():
+            if team.startswith("TBD_"):
+                # Split First Four: TBD_UMBC_Howard -> UMBC, Howard
+                parts = team[4:].split("_")
+                teams.extend(parts)
+            else:
+                teams.append(team)
+    return sorted(list(set(teams)))
 
-def build_region_matchups_from_file(
-    bracket: dict,
-    stats: pd.DataFrame,
-    season: int,
-) -> tuple[dict[str, list[tuple[Team, Team]]], list[tuple[str, str]], dict[str, Team]]:
-    """
-    Build region matchups from a hard-coded bracket JSON file.
-    Looks up each team's stats row by name for the given season.
-    """
-    # Build a lookup: normalized name -> stats row
-    season_stats = stats[stats[config.STATS_SEASON_COL] == season]
-    name_to_stats: dict[str, pd.Series] = {
-        row[config.STATS_TEAM_NAME_COL].lower(): row
-        for _, row in season_stats.iterrows()
-    }
+def find_team_stat_row(stats: pd.DataFrame, team_name: str, season: int) -> pd.Series | None:
+    mask = (stats[config.STATS_SEASON_COL] == season) & (stats[config.STATS_TEAM_NAME_COL] == team_name)
+    matches = stats[mask]
+    if len(matches) == 0:
+        # Fallback to case-insensitive exact match
+        mask = (stats[config.STATS_SEASON_COL] == season) & (stats[config.STATS_TEAM_NAME_COL].str.lower() == team_name.lower())
+        matches = stats[mask]
+        if len(matches) == 0:
+            return None
+    return matches.iloc[0]
 
-    # Bracket-name -> Barttorvik-name aliases for common mismatches
-    bracket_aliases: dict[str, str] = {
-        "ole miss": "mississippi",
-        "uconn": "connecticut",
-        "norfolk state": "norfolk st.",
-        "mississippi state": "mississippi st.",
-        "colorado state": "colorado st.",
-        "michigan state": "michigan st.",
-        "iowa state": "iowa st.",
-        "utah state": "utah st.",
-        "alabama state": "alabama st.",
-        "mcneese": "mcneese st.",
-        "omaha": "nebraska omaha",
-    }
+def build_probability_cache(team_names: list[str], stats: pd.DataFrame, season: int, models: dict, scaler, feature_cols: list[str], calibrators) -> tuple[np.ndarray, dict[str, int]]:
+    n_teams = len(team_names)
+    team_to_idx = {name: i for i, name in enumerate(team_names)}
+    idx_to_team = {i: name for i, name in enumerate(team_names)}
+    
+    # Store stats back for lookup
+    team_rows = []
+    for name in team_names:
+        row = find_team_stat_row(stats, name, season)
+        if row is None:
+            print(f"  [X] Error: Could not find stats for team '{name}' in season {season}.")
+            sys.exit(1)
+        team_rows.append(row)
+        
+    prob_cache = np.zeros((n_teams, n_teams), dtype=np.float32)
+    
+    # Fill cache
+    print(f"  Building probability cache for {n_teams} teams ({n_teams * (n_teams - 1) // 2} matchups)...")
+    for i in range(n_teams):
+        for j in range(i + 1, n_teams):
+            result = predict_matchup(team_rows[i], team_rows[j], models, scaler, feature_cols, calibrators)
+            win_prob_a = result["win_prob_a_ensemble"]
+            prob_cache[i, j] = win_prob_a
+            prob_cache[j, i] = 1.0 - win_prob_a
+            
+    return prob_cache, team_to_idx
 
-    def find_stats(name: str, seed: int) -> pd.Series:
-        key = name.lower()
-        key = bracket_aliases.get(key, key)
-        if key in name_to_stats:
-            return name_to_stats[key]
-        # Partial match: prefer shortest Barttorvik name that contains key
-        # (avoids "alabama" matching "alabama state" when we want exact "alabama")
-        candidates = []
-        for k, v in name_to_stats.items():
-            if key in k or k in key:
-                candidates.append((k, v))
-        if candidates:
-            candidates.sort(key=lambda x: abs(len(x[0]) - len(key)))
-            return candidates[0][1]
-        print(f"  [!] No stats found for '{name}' in {season} -- using seed-only fallback")
-        return pd.Series({config.STATS_TEAM_NAME_COL: name, "SeedNum": seed})
+def get_region_r1_matchups(region_seeds: dict, team_to_idx: dict) -> list:
+    """Returns a list of tuples: ((seed_A, team_name_A_or_TBD), (seed_B, team_name_B_or_TBD)) in correct bracket order."""
+    standard_order = [
+         (1, 16),
+         (8, 9),
+         (5, 12),
+         (4, 13),
+         (6, 11),
+         (3, 14),
+         (7, 10),
+         (2, 15)
+    ]
+    matchups = []
+    for s1, s2 in standard_order:
+        t1 = region_seeds[str(s1)]
+        t2 = region_seeds[str(s2)]
+        matchups.append((t1, t2))
+    return matchups
 
-    region_matchups: dict[str, list[tuple[Team, Team]]] = {}
-    all_teams_by_name: dict[str, Team] = {}
+def resolve_first_four(n_sims: int, team1: str, team2: str, prob_cache: np.ndarray, team_to_idx: dict) -> np.ndarray:
+    idx1 = team_to_idx[team1]
+    idx2 = team_to_idx[team2]
+    p1 = prob_cache[idx1, idx2]
+    rand = np.random.random(n_sims).astype(np.float32)
+    return np.where(rand < p1, idx1, idx2)
 
-    for region_name, region_data in bracket["regions"].items():
-        matchup_list: list[tuple[Team, Team]] = []
-        for m in region_data["matchups"]:
-            h = m["home"]
-            a = m["away"]
-            team_h = Team(h["name"], h["seed"], region_name, find_stats(h["name"], h["seed"]))
-            team_a = Team(a["name"], a["seed"], region_name, find_stats(a["name"], a["seed"]))
-            matchup_list.append((team_h, team_a))
-            all_teams_by_name[h["name"]] = team_h
-            all_teams_by_name[a["name"]] = team_a
-        region_matchups[region_name] = matchup_list
-
-    final_four_matchups = [tuple(p) for p in bracket["final_four_matchups"]]
-
-    return region_matchups, final_four_matchups, all_teams_by_name
-
-
-# ---------------------------------------------------------------------------
-# Main pipeline
-# ---------------------------------------------------------------------------
-
-def build_region_matchups_from_stats(
-    stats: pd.DataFrame, season: int
-) -> tuple[dict[str, list[tuple[Team, Team]]], list[tuple[str, str]], dict[str, Team]]:
-    """
-    Auto-build region matchups from team_stats for a given season.
-    Falls back gracefully if Region column is missing.
-    """
-    teams = build_teams_from_stats(stats, season)
-    all_teams_by_name = {t.name: t for t in teams}
-
-    # Check if Region column exists and is populated
-    has_regions = any(t.region not in ("Unknown", "", None) for t in teams)
-
-    if not has_regions:
-        # No region data — distribute teams into 4 pseudo-regions by seed groups
-        print("  [!] No region data found. Distributing teams into pseudo-regions by seed.")
-        pseudo_regions = ["East", "West", "South", "Midwest"]
-        # Group all seed-1s into different regions, etc.
-        by_seed: dict[int, list[Team]] = defaultdict(list)
-        for t in teams:
-            by_seed[t.seed].append(t)
-
-        region_teams: dict[str, list[Team]] = {r: [] for r in pseudo_regions}
-        for seed, seed_teams in sorted(by_seed.items()):
-            for i, team in enumerate(seed_teams):
-                region = pseudo_regions[i % 4]
-                team.region = region
-                region_teams[region].append(team)
-    else:
-        region_teams = group_teams_by_region(teams)
-
-    region_matchups = {
-        region: get_first_round_matchups(t_list)
-        for region, t_list in region_teams.items()
-    }
-
-    # Standard Final Four pairings (East vs West, South vs Midwest)
-    final_four_matchups = [("East", "West"), ("South", "Midwest")]
-
-    return region_matchups, final_four_matchups, all_teams_by_name
-
-
-def run(
-    season: int,
-    n_sims: int = 10000,
-    n_brackets: int = 15,
-    retrain: bool = False,
-    bracket_file: Optional[str] = None,
-    output_dir: Optional[Path] = None,
-    no_sim: bool = False,
-) -> list[Bracket]:
-    """Full pipeline: load models -> build bracket -> simulate -> generate brackets."""
-
-    # Load or train models
-    model_file = config.PROJECT_ROOT / "models" / "trained_models.pkl"
-    calibrators = None
-    if model_file.exists() and not retrain:
-        print("Loading trained models...")
-        models, scaler, calibrators = load_models()
-    else:
-        print("Training models...")
-        from data_prep import build_training_data
-        training_df = build_training_data()
-        X, y, seasons = prepare_features(training_df)
-        models, scaler = train_final_models(X, y)
-        save_models(models, scaler)
-
-    stats = load_team_stats()
-    feature_cols = config.FEATURES + ["SeedNum"]
-    cache = MatchupCache(models, scaler, feature_cols, calibrators=calibrators)
-
-    print(f"\nBuilding bracket structure for season {season}...")
-    if bracket_file:
-        print(f"  Loading bracket from: {bracket_file}")
-        bracket_data = load_bracket_file(bracket_file)
-        region_matchups, final_four_matchups, all_teams_by_name = \
-            build_region_matchups_from_file(bracket_data, stats, season)
-    else:
-        # Try default bracket file for this season
-        default_bracket = config.PROJECT_ROOT / "data" / f"bracket_{season}.json"
-        if default_bracket.exists():
-            print(f"  Loading bracket from: {default_bracket}")
-            bracket_data = load_bracket_file(str(default_bracket))
-            region_matchups, final_four_matchups, all_teams_by_name = \
-                build_region_matchups_from_file(bracket_data, stats, season)
+def simulate_bracket(n_sims: int, bracket: dict, prob_cache: np.ndarray, team_to_idx: dict):
+    print(f"\nRunning {n_sims:,} simulations vectorized...")
+    start_time = time.time()
+    
+    # Structure setup
+    # Game slots for Round 1
+    r1_a = [] # lists of arrays of shape (n_sims,)
+    r1_b = []
+    
+    # Parse regions
+    region_names = ["East", "West", "South", "Midwest"]  # We will sort later for Final Four
+    region_matchups = {}
+    
+    # Resolve first four
+    for region, seeds in bracket["regions"].items():
+        region_matchups[region] = get_region_r1_matchups(seeds, team_to_idx)
+        
+    def get_team_array(team_str: str) -> np.ndarray:
+        if team_str.startswith("TBD_"):
+            parts = team_str[4:].split("_")
+            return resolve_first_four(n_sims, parts[0], parts[1], prob_cache, team_to_idx)
         else:
-            print(f"  [!] No bracket file found for {season}. Using auto-seeding fallback.")
-            print(f"  To use hard-coded bracket: create data/bracket_{season}.json")
-            region_matchups, final_four_matchups, all_teams_by_name = \
-                build_region_matchups_from_stats(stats, season)
+            return np.full(n_sims, team_to_idx[team_str], dtype=np.int32)
+            
+    # Round 1 Setup
+    # Keep track of the nodes in the tree
+    # 4 regions * 8 games = 32 games in R1
+    regions_order = ["East", "West", "Midwest", "South"] # Match FF structure
+    
+    # We will just maintain lists of arrays representing the winner of each slot.
+    # r1_winners mapping: list of 32 elements, each an array(n_sims)
+    r1_winners = []
+    
+    for r in regions_order:
+        matchups = region_matchups[r]
+        for t1, t2 in matchups:
+            a_arr = get_team_array(t1)
+            b_arr = get_team_array(t2)
+            
+            p_win_a = prob_cache[a_arr, b_arr]
+            rand = np.random.random(n_sims).astype(np.float32)
+            winners = np.where(rand < p_win_a, a_arr, b_arr)
+            r1_winners.append(winners)
+            
+    # Round 2: 16 games
+    r2_winners = []
+    for i in range(0, 32, 2):
+        a_arr = r1_winners[i]
+        b_arr = r1_winners[i+1]
+        p_win_a = prob_cache[a_arr, b_arr]
+        rand = np.random.random(n_sims).astype(np.float32)
+        winners = np.where(rand < p_win_a, a_arr, b_arr)
+        r2_winners.append(winners)
 
-    total_teams = sum(len(v) * 2 for v in region_matchups.values())
-    print(f"  Teams in bracket: {total_teams}")
-    for region, matchups in region_matchups.items():
-        print(f"  {region}: {len(matchups)} first-round games")
+    # Round 3 (Sweet 16): 8 games
+    r3_winners = []
+    for i in range(0, 16, 2):
+        a_arr = r2_winners[i]
+        b_arr = r2_winners[i+1]
+        p_win_a = prob_cache[a_arr, b_arr]
+        rand = np.random.random(n_sims).astype(np.float32)
+        winners = np.where(rand < p_win_a, a_arr, b_arr)
+        r3_winners.append(winners)
 
-    from bracket_engine import run_analytical
-    print(f"\nRunning Stratified Champion x Temperature Bracket generation...")
-    brackets, analysis_report = run_analytical(
-        season, region_matchups, final_four_matchups, all_teams_by_name, cache,
-        n_brackets=n_brackets,
-        n_champions=config.BRACKET_N_CHAMPIONS,
-        temperature_tiers=config.BRACKET_TEMPERATURE_TIERS,
-        candidates_per_cell=config.BRACKET_CANDIDATES_PER_CELL,
-    )
+    # Round 4 (Elite 8): 4 games
+    r4_winners = []
+    for i in range(0, 8, 2):
+        a_arr = r3_winners[i]
+        b_arr = r3_winners[i+1]
+        p_win_a = prob_cache[a_arr, b_arr]
+        rand = np.random.random(n_sims).astype(np.float32)
+        winners = np.where(rand < p_win_a, a_arr, b_arr)
+        r4_winners.append(winners)
 
-    print(f"\n{'='*75}")
-    print(f"  UPSET PREMIUM REPORT")
-    print(f"{'='*75}")
-    for upr in analysis_report['upset_premiums'][:10]:
-        if upr['upset_premium'] > 0:
-            print(f"  +{upr['upset_premium']:>4.1f} pts : #{upr['seed']:<2} {upr['team'].name:<20} | {upr['road_description']}")
+    # Round 5 (Final Four)
+    # The regions_order = ["East", "West", "Midwest", "South"] maps exactly to:
+    # r4_winners[0] = East, r4_winners[1] = West, r4_winners[2] = Midwest, r4_winners[3] = South
+    # FF matchups from json: East vs West, Midwest vs South -> Game 0: 0 vs 1, Game 1: 2 vs 3
+    r5_winners = []
+    for i in range(0, 4, 2):
+        a_arr = r4_winners[i]
+        b_arr = r4_winners[i+1]
+        p_win_a = prob_cache[a_arr, b_arr]
+        rand = np.random.random(n_sims).astype(np.float32)
+        winners = np.where(rand < p_win_a, a_arr, b_arr)
+        r5_winners.append(winners)
 
-    reach_probs = analysis_report['path_probs']
-
-    if not no_sim:
-        print(f"\nRunning Monte Carlo simulation ({n_sims:,} iterations) for validation reporting...")
-        mc_reach_probs = run_monte_carlo(
-            region_matchups, final_four_matchups, cache, n_sims=n_sims
-        )
-        print(f"\nTop teams by championship probability (Monte Carlo):")
-        print_reach_probs(mc_reach_probs, all_teams_by_name)
-    else:
-        print(f"\nTop teams by championship probability (Analytical):")
-        print_reach_probs(reach_probs, all_teams_by_name)
-
-    print(f"\n{'='*60}")
-    print(f"  BRACKET RECOMMENDATIONS")
-    print(f"{'='*60}")
-    for i, bracket in enumerate(brackets, 1):
-        print(f"\n  --- Bracket {i} ---")
-        print_bracket(bracket)
-
-    diversity = compute_bracket_diversity(brackets)
-    print_diversity_report(diversity, brackets)
-
-    # Save outputs
-    if output_dir is None:
-        output_dir = config.PROCESSED_DIR
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save reach probabilities
-    probs_records = []
-    for name, probs in reach_probs.items():
-        team = all_teams_by_name.get(name)
-        seed = team.seed if team else 0
-        region = team.region if team else "?"
-        rec = {"team": name, "seed": seed, "region": region}
-        for r in range(1, 7):
-            rec[ROUND_NAMES[r]] = round(probs.get(r, 0.0), 4)
-        probs_records.append(rec)
-
-    probs_df = pd.DataFrame(probs_records).sort_values("R64", ascending=False)
-    probs_path = output_dir / f"reach_probabilities_{season}.csv"
-    probs_df.to_csv(probs_path, index=False)
-    print(f"\n  Saved reach probabilities -> {probs_path}")
-
-    # Save brackets as JSON (include diversity report)
-    brackets_data = {
-        "season": season,
-        "n_sims": n_sims,
-        "diversity": diversity,
-        "brackets": [b.to_dict() for b in brackets],
+    # Round 6 (Championship)
+    a_arr = r5_winners[0]
+    b_arr = r5_winners[1]
+    p_win_a = prob_cache[a_arr, b_arr]
+    rand = np.random.random(n_sims).astype(np.float32)
+    champ = np.where(rand < p_win_a, a_arr, b_arr)
+    
+    elapsed = time.time() - start_time
+    print(f"  Simulation complete in {elapsed:.2f}s")
+    
+    # Store reaching status for all N simulations
+    # To compute P(reach round X), we simply count how many times each team appears in the winners list for that round.
+    n_teams = prob_cache.shape[0]
+    
+    r1_counts = np.bincount(np.concatenate(r1_winners), minlength=n_teams)
+    r2_counts = np.bincount(np.concatenate(r2_winners), minlength=n_teams)
+    r3_counts = np.bincount(np.concatenate(r3_winners), minlength=n_teams)
+    r4_counts = np.bincount(np.concatenate(r4_winners), minlength=n_teams)
+    r5_counts = np.bincount(np.concatenate(r5_winners), minlength=n_teams)
+    champ_counts = np.bincount(champ, minlength=n_teams)
+    
+    return {
+        "p_r32": r1_counts / n_sims,     # Win R1 = reach R32
+        "p_s16": r2_counts / n_sims,     # Win R2 = reach S16
+        "p_e8": r3_counts / n_sims,      # Win R3 = reach E8
+        "p_f4": r4_counts / n_sims,      # Win R4 = reach F4
+        "p_final": r5_counts / n_sims,   # Win FF = reach NC Game
+        "p_champ": champ_counts / n_sims # Win NC Game
     }
-    brackets_path = output_dir / f"brackets_{season}.json"
-    with open(brackets_path, "w") as f:
-        json.dump(brackets_data, f, indent=2)
-    print(f"  Saved brackets -> {brackets_path}")
-
-    return brackets
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="March Madness Bracket Simulator")
-    parser.add_argument("--season", type=int, default=None,
-                        help="Season to simulate (default: latest in dataset)")
-    parser.add_argument("--n-sims", type=int, default=10000,
-                        help="Number of Monte Carlo simulations (default: 10000)")
-    parser.add_argument("--n-brackets", type=int, default=15,
-                        help="Max brackets to output (default: 15)")
-    parser.add_argument("--n-champions", type=int, default=None,
-                        help="Number of top champion candidates (default: from config)")
-    parser.add_argument("--temperatures", type=float, nargs="+", default=None,
-                        help="Temperature tiers (default: from config)")
-    parser.add_argument("--candidates-per-cell", type=int, default=None,
-                        help="Candidates per (champion, temp) cell (default: from config)")
-    parser.add_argument("--retrain", action="store_true",
-                        help="Force model retraining")
-    parser.add_argument("--bracket-file", type=str, default=None,
-                        help="Path to bracket JSON file (for actual bracket input)")
-    parser.add_argument("--no-sim", action="store_true",
-                        help="Skip Monte Carlo simulation and run pure analytical backend")
+    parser = argparse.ArgumentParser(description="March Madness Monte Carlo Simulator")
+    parser.add_argument("--n-sims", type=int, default=50000, help="Number of simulations to run")
+    parser.add_argument("--season", type=int, default=2026, help="Season to simulate")
+    parser.add_argument("--first-four-mode", choices=["favorite", "average", "simulate"], default="simulate", 
+                        help="How to handle First Four games. Overridden by simulated vector approach.")
+    parser.add_argument("--output", type=str, default=str(config.PROCESSED_DIR / "reach_probabilities_{}.csv"), help="Output path")
     args = parser.parse_args()
 
-    if args.n_champions is not None:
-        config.BRACKET_N_CHAMPIONS = args.n_champions
-    if args.temperatures is not None:
-        config.BRACKET_TEMPERATURE_TIERS = args.temperatures
-    if args.candidates_per_cell is not None:
-        config.BRACKET_CANDIDATES_PER_CELL = args.candidates_per_cell
+    # Create output dir
+    output_path = Path(args.output.replace("{}", str(args.season)))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    print("Loading models and data...")
+    models, scaler, calibrators = load_models()
     stats = load_team_stats()
-    season = args.season or int(stats[config.STATS_SEASON_COL].max())
+    
+    bracket_path = config.PROJECT_ROOT / "data" / f"bracket_{args.season}.json"
+    if not bracket_path.exists():
+        print(f"  [X] Bracket file {bracket_path} not found.")
+        sys.exit(1)
+        
+    bracket = load_bracket(bracket_path)
+    team_names = extract_teams_from_bracket(bracket)
+    feature_cols = config.FEATURES
 
-    bracket_file = args.bracket_file
-    if not bracket_file:
-        default = config.PROJECT_ROOT / "data" / f"bracket_{season}.json"
-        if default.exists():
-            bracket_file = str(default)
+    prob_cache, team_to_idx = build_probability_cache(team_names, stats, args.season, models, scaler, feature_cols, calibrators)
+    idx_to_team = {v: k for k, v in team_to_idx.items()}
 
-    run(
-        season=season,
-        n_sims=args.n_sims,
-        n_brackets=args.n_brackets,
-        retrain=args.retrain,
-        bracket_file=bracket_file,
-        no_sim=args.no_sim,
-    )
-
-
+    # Simulate
+    results = simulate_bracket(args.n_sims, bracket, prob_cache, team_to_idx)
+    
+    # Generate Output Dataframe
+    rows = []
+    
+    # Assign seeds and regions to teams
+    team_seed_region = {}
+    for region, seeds in bracket["regions"].items():
+        for seed_str, team_str in seeds.items():
+            seed = int(seed_str)
+            if team_str.startswith("TBD_"):
+                parts = team_str[4:].split("_")
+                for p in parts:
+                    team_seed_region[p] = (seed, region)
+            else:
+                team_seed_region[team_str] = (seed, region)
+                
+    for i in range(len(team_names)):
+        t_name = idx_to_team[i]
+        seed, region = team_seed_region[t_name]
+        
+        p_r32 = results["p_r32"][i]
+        p_s16 = results["p_s16"][i]
+        p_e8  = results["p_e8"][i]
+        p_f4  = results["p_f4"][i]
+        p_final = results["p_final"][i]
+        p_champ = results["p_champ"][i]
+        
+        expected_score = (p_r32 * 1) + (p_s16 * 2) + (p_e8 * 4) + (p_f4 * 8) + (p_final * 16) + (p_champ * 32)
+        
+        rows.append({
+            "team": t_name,
+            "seed": seed,
+            "region": region,
+            "p_r32": p_r32,
+            "p_s16": p_s16,
+            "p_e8": p_e8,
+            "p_f4": p_f4,
+            "p_final": p_final,
+            "p_champ": p_champ,
+            "expected_score": expected_score
+        })
+        
+    df = pd.DataFrame(rows)
+    df = df.sort_values(by="p_champ", ascending=False).reset_index(drop=True)
+    
+    df.to_csv(output_path, index=False)
+    print(f"\nSaved reach probabilities to {output_path}")
+    
+    # Print Stdout Report
+    print(f"\n{args.season} NCAA Tournament Probability Matrix ({args.n_sims:,} simulations)")
+    print("═" * 84)
+    print(f"{'Team':<20} {'Seed':<4} {'Region':<9} {'R32':>6} {'S16':>6} {'E8':>6} {'F4':>6} {'Final':>6} {'Champ':>6} {'E[Pts]':>6}")
+    print("─" * 84)
+    
+    for _, row in df.iterrows():
+        # Hide teams with 0% chance of making the round of 64 completely if they are first four losers? 
+        # For simplicity, print all 68, but we can stop at reasonable threshold or just print top 30
+        print(f"{row['team']:<20} {row['seed']:<4} {row['region']:<9} "
+              f"{row['p_r32']:6.1%} {row['p_s16']:6.1%} {row['p_e8']:6.1%} "
+              f"{row['p_f4']:6.1%} {row['p_final']:6.1%} {row['p_champ']:6.1%} {row['expected_score']:6.1f}")
+              
 if __name__ == "__main__":
     main()

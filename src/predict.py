@@ -103,8 +103,8 @@ def predict_matchup(
     return {
         "team_a": team_a_name,
         "team_b": team_b_name,
-        "seed_a": int(team_a.get("SeedNum", 0)),
-        "seed_b": int(team_b.get("SeedNum", 0)),
+        "seed_a": int(team_a.get("SeedNum") if pd.notna(team_a.get("SeedNum")) else 0),
+        "seed_b": int(team_b.get("SeedNum") if pd.notna(team_b.get("SeedNum")) else 0),
         "win_prob_a_logistic": probs.get("logistic", 0.5),
         "win_prob_a_xgboost": probs.get("xgboost", 0.5),
         "win_prob_a_rf": probs.get("rf", 0.5),
