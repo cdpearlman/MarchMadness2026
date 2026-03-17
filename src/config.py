@@ -162,8 +162,26 @@ TRAIN_SEASONS.remove(2020)
 PHYSICAL_FEATURE_START_SEASON = 2008
 
 # ---------------------------------------------------------------------------
-# Bracket generation (champion x temperature stratified sampling)
+# Bracket generation v1.0 — Legacy (champion x temperature stratified sampling)
 # ---------------------------------------------------------------------------
-BRACKET_N_CHAMPIONS = 5
-BRACKET_TEMPERATURE_TIERS = [0.4, 0.9, 1.6]
-BRACKET_CANDIDATES_PER_CELL = 12
+# BRACKET_N_CHAMPIONS = 5
+# BRACKET_TEMPERATURE_TIERS = [0.4, 0.9, 1.6]
+# BRACKET_CANDIDATES_PER_CELL = 12
+
+# ---------------------------------------------------------------------------
+# Bracket Engine v1.5 — Probabilistic Portfolio Generation
+# ---------------------------------------------------------------------------
+BRACKET_N_TOTAL = 10_000
+BRACKET_N_SIMS = 50_000
+BRACKET_N_PORTFOLIO = 3
+BRACKET_CHAMP_CUMULATIVE_CUTOFF = 0.80
+BRACKET_P_FLOOR = 0.20
+BRACKET_TEMP_TIERS = [
+    (0.1, 0.3, 0.30),   # (low, high, fraction) — chalk-leaning
+    (0.5, 1.0, 0.40),   # moderate upsets
+    (1.5, 3.0, 0.30),   # contrarian-leaning
+]
+BRACKET_SCORE_CHUNK_SIZE = 500
+
+# Shared matchup ordering (used by both simulate.py and bracket_gen.py)
+MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]

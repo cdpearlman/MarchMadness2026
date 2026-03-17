@@ -74,20 +74,14 @@ def build_probability_cache(team_names: list[str], stats: pd.DataFrame, season: 
             
     return prob_cache, team_to_idx
 
+def get_regions_order(bracket: dict) -> list[str]:
+    """Flatten final_four_matchups to get consistent region ordering."""
+    return [r for pair in bracket["final_four_matchups"] for r in pair]
+
 def get_region_r1_matchups(region_seeds: dict, team_to_idx: dict) -> list:
     """Returns a list of tuples: ((seed_A, team_name_A_or_TBD), (seed_B, team_name_B_or_TBD)) in correct bracket order."""
-    standard_order = [
-         (1, 16),
-         (8, 9),
-         (5, 12),
-         (4, 13),
-         (6, 11),
-         (3, 14),
-         (7, 10),
-         (2, 15)
-    ]
     matchups = []
-    for s1, s2 in standard_order:
+    for s1, s2 in config.MATCHUP_ORDER:
         t1 = region_seeds[str(s1)]
         t2 = region_seeds[str(s2)]
         matchups.append((t1, t2))
@@ -100,122 +94,112 @@ def resolve_first_four(n_sims: int, team1: str, team2: str, prob_cache: np.ndarr
     rand = np.random.random(n_sims).astype(np.float32)
     return np.where(rand < p1, idx1, idx2)
 
-def simulate_bracket(n_sims: int, bracket: dict, prob_cache: np.ndarray, team_to_idx: dict):
-    print(f"\nRunning {n_sims:,} simulations vectorized...")
-    start_time = time.time()
-    
-    # Structure setup
-    # Game slots for Round 1
-    r1_a = [] # lists of arrays of shape (n_sims,)
-    r1_b = []
-    
-    # Parse regions
-    region_names = ["East", "West", "South", "Midwest"]  # We will sort later for Final Four
+def _simulate_core(n_sims: int, bracket: dict, prob_cache: np.ndarray, team_to_idx: dict):
+    """Core simulation — returns raw winner arrays for each round.
+
+    Returns: (r1_winners, r2_winners, r3_winners, r4_winners, r5_winners, champ)
+    where each rX_winners is a list of arrays of shape (n_sims,) and champ is a single array.
+    """
     region_matchups = {}
-    
-    # Resolve first four
     for region, seeds in bracket["regions"].items():
         region_matchups[region] = get_region_r1_matchups(seeds, team_to_idx)
-        
+
     def get_team_array(team_str: str) -> np.ndarray:
         if team_str.startswith("TBD_"):
             parts = team_str[4:].split("_")
             return resolve_first_four(n_sims, parts[0], parts[1], prob_cache, team_to_idx)
         else:
             return np.full(n_sims, team_to_idx[team_str], dtype=np.int32)
-            
-    # Round 1 Setup
-    # Keep track of the nodes in the tree
-    # 4 regions * 8 games = 32 games in R1
-    regions_order = ["East", "West", "Midwest", "South"] # Match FF structure
-    
-    # We will just maintain lists of arrays representing the winner of each slot.
-    # r1_winners mapping: list of 32 elements, each an array(n_sims)
+
+    regions_order = get_regions_order(bracket)
+
+    # R64: 4 regions x 8 games = 32 games
     r1_winners = []
-    
     for r in regions_order:
         matchups = region_matchups[r]
         for t1, t2 in matchups:
             a_arr = get_team_array(t1)
             b_arr = get_team_array(t2)
-            
             p_win_a = prob_cache[a_arr, b_arr]
             rand = np.random.random(n_sims).astype(np.float32)
             winners = np.where(rand < p_win_a, a_arr, b_arr)
             r1_winners.append(winners)
-            
-    # Round 2: 16 games
-    r2_winners = []
-    for i in range(0, 32, 2):
-        a_arr = r1_winners[i]
-        b_arr = r1_winners[i+1]
-        p_win_a = prob_cache[a_arr, b_arr]
-        rand = np.random.random(n_sims).astype(np.float32)
-        winners = np.where(rand < p_win_a, a_arr, b_arr)
-        r2_winners.append(winners)
 
-    # Round 3 (Sweet 16): 8 games
-    r3_winners = []
-    for i in range(0, 16, 2):
-        a_arr = r2_winners[i]
-        b_arr = r2_winners[i+1]
-        p_win_a = prob_cache[a_arr, b_arr]
-        rand = np.random.random(n_sims).astype(np.float32)
-        winners = np.where(rand < p_win_a, a_arr, b_arr)
-        r3_winners.append(winners)
+    def sim_round(prev_winners):
+        next_winners = []
+        for i in range(0, len(prev_winners), 2):
+            a_arr = prev_winners[i]
+            b_arr = prev_winners[i + 1]
+            p_win_a = prob_cache[a_arr, b_arr]
+            rand = np.random.random(n_sims).astype(np.float32)
+            winners = np.where(rand < p_win_a, a_arr, b_arr)
+            next_winners.append(winners)
+        return next_winners
 
-    # Round 4 (Elite 8): 4 games
-    r4_winners = []
-    for i in range(0, 8, 2):
-        a_arr = r3_winners[i]
-        b_arr = r3_winners[i+1]
-        p_win_a = prob_cache[a_arr, b_arr]
-        rand = np.random.random(n_sims).astype(np.float32)
-        winners = np.where(rand < p_win_a, a_arr, b_arr)
-        r4_winners.append(winners)
+    r2_winners = sim_round(r1_winners)   # 16 games
+    r3_winners = sim_round(r2_winners)   # 8 games (Sweet 16)
+    r4_winners = sim_round(r3_winners)   # 4 games (Elite 8)
+    r5_winners = sim_round(r4_winners)   # 2 games (Final Four)
+    champ_arr = sim_round(r5_winners)    # 1 game (Championship)
 
-    # Round 5 (Final Four)
-    # The regions_order = ["East", "West", "Midwest", "South"] maps exactly to:
-    # r4_winners[0] = East, r4_winners[1] = West, r4_winners[2] = Midwest, r4_winners[3] = South
-    # FF matchups from json: East vs West, Midwest vs South -> Game 0: 0 vs 1, Game 1: 2 vs 3
-    r5_winners = []
-    for i in range(0, 4, 2):
-        a_arr = r4_winners[i]
-        b_arr = r4_winners[i+1]
-        p_win_a = prob_cache[a_arr, b_arr]
-        rand = np.random.random(n_sims).astype(np.float32)
-        winners = np.where(rand < p_win_a, a_arr, b_arr)
-        r5_winners.append(winners)
+    return r1_winners, r2_winners, r3_winners, r4_winners, r5_winners, champ_arr[0]
 
-    # Round 6 (Championship)
-    a_arr = r5_winners[0]
-    b_arr = r5_winners[1]
-    p_win_a = prob_cache[a_arr, b_arr]
-    rand = np.random.random(n_sims).astype(np.float32)
-    champ = np.where(rand < p_win_a, a_arr, b_arr)
-    
+
+def simulate_bracket(n_sims: int, bracket: dict, prob_cache: np.ndarray, team_to_idx: dict):
+    """Simulate bracket and return reach probability counts (original behavior)."""
+    print(f"\nRunning {n_sims:,} simulations vectorized...")
+    start_time = time.time()
+
+    r1_winners, r2_winners, r3_winners, r4_winners, r5_winners, champ = \
+        _simulate_core(n_sims, bracket, prob_cache, team_to_idx)
+
     elapsed = time.time() - start_time
     print(f"  Simulation complete in {elapsed:.2f}s")
-    
-    # Store reaching status for all N simulations
-    # To compute P(reach round X), we simply count how many times each team appears in the winners list for that round.
+
     n_teams = prob_cache.shape[0]
-    
     r1_counts = np.bincount(np.concatenate(r1_winners), minlength=n_teams)
     r2_counts = np.bincount(np.concatenate(r2_winners), minlength=n_teams)
     r3_counts = np.bincount(np.concatenate(r3_winners), minlength=n_teams)
     r4_counts = np.bincount(np.concatenate(r4_winners), minlength=n_teams)
     r5_counts = np.bincount(np.concatenate(r5_winners), minlength=n_teams)
     champ_counts = np.bincount(champ, minlength=n_teams)
-    
+
     return {
-        "p_r32": r1_counts / n_sims,     # Win R1 = reach R32
-        "p_s16": r2_counts / n_sims,     # Win R2 = reach S16
-        "p_e8": r3_counts / n_sims,      # Win R3 = reach E8
-        "p_f4": r4_counts / n_sims,      # Win R4 = reach F4
-        "p_final": r5_counts / n_sims,   # Win FF = reach NC Game
-        "p_champ": champ_counts / n_sims # Win NC Game
+        "p_r32": r1_counts / n_sims,
+        "p_s16": r2_counts / n_sims,
+        "p_e8": r3_counts / n_sims,
+        "p_f4": r4_counts / n_sims,
+        "p_final": r5_counts / n_sims,
+        "p_champ": champ_counts / n_sims
     }
+
+
+def simulate_bracket_raw(n_sims: int, bracket: dict, prob_cache: np.ndarray, team_to_idx: dict):
+    """Simulate and return full game-by-game outcomes.
+
+    Returns:
+        sim_outcomes: (n_sims, 63) int16 — winner team index for each game slot
+        round_points: (63,) float32 — ESPN point value for each slot
+    """
+    print(f"\nRunning {n_sims:,} raw simulations...")
+    start_time = time.time()
+
+    r1_w, r2_w, r3_w, r4_w, r5_w, champ = \
+        _simulate_core(n_sims, bracket, prob_cache, team_to_idx)
+
+    # Stack: 32 R64 + 16 R32 + 8 S16 + 4 E8 + 2 F4 + 1 Champ = 63 slots
+    all_winners = r1_w + r2_w + r3_w + r4_w + r5_w + [champ]
+    sim_outcomes = np.column_stack(all_winners).astype(np.int16)
+
+    round_points = np.array(
+        [1] * 32 + [2] * 16 + [4] * 8 + [8] * 4 + [16] * 2 + [32] * 1,
+        dtype=np.float32
+    )
+
+    elapsed = time.time() - start_time
+    print(f"  Raw simulation complete in {elapsed:.2f}s")
+
+    return sim_outcomes, round_points
 
 def main():
     parser = argparse.ArgumentParser(description="March Madness Monte Carlo Simulator")

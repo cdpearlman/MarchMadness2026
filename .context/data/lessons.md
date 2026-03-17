@@ -74,6 +74,18 @@
 **Fix**: Switched to `win_prob_a_ensemble` with optimized weights. Also added calibration.
 **Rule going forward**: When a component depends on "the best model," verify which model that actually is after every retraining. Don't trust stale comments. The MatchupCache model choice should be a config parameter, not a hardcoded string.
 
+## 2026-03-16 — Hard upset thresholds can't adapt to varying tournament landscapes
+**What happened**: The deterministic upset validation gate (p_min=0.40, own_max=0.15 for R64) produced identical R64/R32 picks across all 3 bracket types. 88% pairwise overlap.
+**Root cause**: Fixed thresholds are supply-blind. In a year with few credible upsets, no games qualify and all brackets are chalk. In a year with many toss-ups, the threshold doesn't exploit them proportionally. The binary pass/fail gate also means when an upset DOES qualify, ALL bracket types take it — no diversity.
+**Fix**: Replaced with probabilistic temperature-based flipping where `p_flip = upset_score^(1/temperature)`. This naturally adapts: few credible upsets = chalky brackets, many toss-ups = diverse brackets. Different temperatures across brackets ensure different picks even for the same game.
+**Rule going forward**: Prefer continuous/probabilistic mechanisms over hard thresholds for diversity-sensitive decisions. Hard thresholds create cliff effects where small changes in input produce identical outputs across all brackets.
+
+## 2026-03-16 — Verify math formulas against boundary conditions before speccing
+**What happened**: Original spec for flip probability used `sigmoid(temperature * logit(upset_score))`. Since upset_score < 0.5, logit is negative, so higher temperature made the value more negative — the formula was backwards (higher temp = LESS flipping, opposite of intent).
+**Root cause**: The formula "looked right" by analogy to softmax temperature scaling but wasn't checked against boundary values (temp=0, temp=1, temp=inf).
+**Fix**: Replaced with power scaling `upset_score^(1/temperature)` which has correct behavior at all boundaries.
+**Rule going forward**: For any mathematical formula in a spec, verify boundary behavior at key values (0, 1, inf, typical inputs) before committing to it. Especially when adapting formulas from other domains (softmax temperature ≠ upset temperature).
+
 ## 2026-03-16 — First Four TBD entries resolved by string split, not model
 **What happened**: `build_region_round1()` resolved `TBD_TeamA_TeamB` entries by splitting on `_` and taking the first team — an arbitrary choice unrelated to team quality.
 **Root cause**: Quick placeholder logic that was never replaced with proper resolution.

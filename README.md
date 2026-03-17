@@ -45,11 +45,30 @@ python src/predict.py --retrain --season 2026
 python src/backtest.py
 
 # Run Monte Carlo simulation to estimate per-team reach probabilities
-python src/simulate.py --n-sims 50000
+python src/simulate.py --n-sims 50000 --season 2026
 
-# Generate specific bracket strategies (Model Chalk, Value Champion, Contrarian)
-python src/bracket_gen.py --ownership data/ownership_2026.json --types chalk value contrarian
+# Generate portfolio-optimized brackets (requires simulate.py output)
+python src/bracket_gen.py --season 2026 --ownership data/ownership_2026.json
+
+# Customize generation parameters
+python src/bracket_gen.py --season 2026 --ownership data/ownership_2026.json \
+    --n-total 10000 --n-sims 50000 --n-portfolio 3
 ```
+
+### Full Bracket Generation Pipeline
+
+```bash
+# 1. Train models (skip if models/trained_models.pkl exists)
+python src/predict.py --retrain --season 2026
+
+# 2. Simulate tournaments to get reach probabilities
+python src/simulate.py --n-sims 50000 --season 2026
+
+# 3. Generate optimized bracket portfolio
+python src/bracket_gen.py --season 2026 --ownership data/ownership_2026.json
+```
+
+Output: `data/processed/brackets_2026.json` containing 3 portfolio brackets selected to maximize E[max score] across simulated tournaments. Runtime: ~90 seconds.
 
 ## Project Structure
 
@@ -78,8 +97,8 @@ MarchMadness26/
 │   ├── models.py                       # LogReg, XGBoost, RF, Ensemble + LOSO CV + SHAP + calibration
 │   ├── predict.py                      # CLI for matchup/bracket predictions (calibrated)
 │   ├── backtest.py                     # Game-level LOSO backtesting vs seed baseline
-│   ├── simulate.py                     # Monte Carlo tournament simulator
-│   ├── bracket_gen.py                  # Bracket strategy (Chalk, Value, Contrarian)
+│   ├── simulate.py                     # Monte Carlo tournament simulator (reach probs + raw outcomes)
+│   ├── bracket_gen.py                  # Bracket Engine v1.5 (probabilistic generation + portfolio optimization)
 │   └── run_eval.py                     # Helper to run full eval and save results
 │
 ├── data/processed/
@@ -124,11 +143,12 @@ MNCAATourneyDetailedResults.csv → data_prep.py → training_data.csv
                                                        │
                                                        ▼
                                               simulate.py
-                                        (Monte Carlo probabilities)
+                                     (reach probabilities + raw outcomes)
                                                        │
                                                        ▼
                                             bracket_gen.py
-                                     (ownership-adjusted bracket picks)
+                                   (probabilistic generation + portfolio
+                                    optimization via greedy E[max score])
 ```
 
 ## Features Used (24 differential features)
@@ -152,7 +172,7 @@ All features are computed as `TeamA_value - TeamB_value`:
 - **Pre-Tournament stats only**: Barttorvik CSVs filtered to end on Selection Sunday to avoid data leakage
 - **Two rows per game**: Each game creates two training rows (swap Team A/B) to prevent positional bias
 - **LOSO CV**: Leave-One-Season-Out ensures no future data leaks into training
-- **Champion x Temperature bracket generation**: Forces different champions across brackets, samples upset combinations at varying temperatures, stratified selection for portfolio coverage
+- **Bracket Engine v1.5**: Generates 10K candidate brackets using temperature-controlled probabilistic upset flipping, then selects the optimal portfolio of 3 via greedy E[max score] optimization over 50K Monte Carlo simulated tournaments
 
 ## Data Sources
 

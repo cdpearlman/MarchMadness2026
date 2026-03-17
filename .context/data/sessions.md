@@ -68,3 +68,19 @@
 - B3 (contrarian): Illinois champ (7.6x value), Louisville/N.C. State/Texas Tech F4. EV=61.9
 **Open threads**:
 - B2 vs B3 overlap is 88% (exceeds 85% threshold). Root cause: R64 is 32/32 identical across all brackets (always chalk), R32 is 15-16/16. Differentiation only happens at S16+. Need to inject early-round upsets in value/contrarian brackets to break overlap.
+
+## 2026-03-16 — Bracket Engine v1.5 Design Session
+**Area**: Bracket generation architecture
+**Work done**:
+- Brainstormed 12 approaches to solve early-round bracket convergence. Evaluated each against constraints: variable upset supply across years, allowing valuable upsets in multiple brackets, pool EV optimization, and computational feasibility.
+- Eliminated: forced upset quotas (#3/#4 — supply-blind), anti-correlation/partitioning (#7/#8 — blocks shared valuable picks), region-flavored brackets (#11 — doesn't match upset distribution reality).
+- Selected combined approach: temperature-based probabilistic generation + Monte Carlo portfolio optimization. This merges what were originally separate v1.5 (probabilistic flipping) and v2 (portfolio optimization) ideas into a single architecture.
+- Designed 4-stage pipeline: champion sampling -> bracket generation -> tournament simulation -> greedy portfolio selection. Full spec at `specs/bracket_engine_v1.5.md`.
+- Key design decisions: (1) Only lock champion, not F4 — F4 diversity emerges from temperature. (2) Champion sampled proportionally from top X% of championship probability mass, not deterministically selected. (3) Bracket "types" (chalk/value/contrarian) replaced by continuous temperature parameter. (4) Greedy submodular optimization for portfolio selection.
+- Found and fixed a bug in the spec: original flip probability formula `sigmoid(temperature * logit(upset_score))` was backwards (higher temp = less flipping). Corrected to power scaling `upset_score^(1/temperature)`.
+- Earmarked opponent-aware optimization as v2+ (generating synthetic opponent brackets from ownership data to optimize P(1st place) instead of E[max score]).
+**Decisions made**: Full architecture documented in `specs/bracket_engine_v1.5.md` and decision record.
+**Open threads**:
+- Open parameters to tune: p_floor, temperature range/distribution, champion cutoff threshold, ownership's role in generation vs. pure probability
+- simulate.py needs extension to output full 63-game outcomes (not just reach probabilities)
+- Implementation not yet started
