@@ -151,7 +151,7 @@ RANDOM_FOREST_PARAMS = dict(
 )
 
 # Ensemble weights (LogReg, XGBoost, RF) — optimized via LOSO CV log-loss
-ENSEMBLE_WEIGHTS = [0.5139, 0.0, 0.4861]
+ENSEMBLE_WEIGHTS = [0.5467, 0.0, 0.4533]
 
 # Seasons to include in training (Barttorvik data starts 2008)
 TRAIN_SEASONS = list(range(2008, 2026))  # 2008-2025 inclusive
@@ -172,8 +172,8 @@ PHYSICAL_FEATURE_START_SEASON = 2008
 # Bracket Engine v1.5 — Probabilistic Portfolio Generation
 # ---------------------------------------------------------------------------
 BRACKET_N_TOTAL = 15_000
-BRACKET_N_SIMS = 50_000
-BRACKET_N_PORTFOLIO = 25
+BRACKET_N_SIMS = 75  # start low; increase to 150/200 if brackets are incoherent
+BRACKET_N_PORTFOLIO = 10
 BRACKET_CHAMP_CUMULATIVE_CUTOFF = 0.80
 BRACKET_P_FLOOR = 0.20
 BRACKET_TEMP_TIERS = [
@@ -181,7 +181,7 @@ BRACKET_TEMP_TIERS = [
     (0.5, 1.0, 0.40),   # moderate upsets
     (1.5, 3.0, 0.30),   # contrarian-leaning
 ]
-BRACKET_SCORE_CHUNK_SIZE = 500
+BRACKET_SCORE_CHUNK_SIZE = 1500  # process all sims in a single pass at low sim counts
 BRACKET_EDGE_CAP = 3.0  # Max leverage multiplier for edge-clamped scoring
 
 # Shared matchup ordering (used by both simulate.py and bracket_gen.py)

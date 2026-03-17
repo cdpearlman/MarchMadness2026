@@ -282,9 +282,9 @@ def main():
     
     # Print Stdout Report
     print(f"\n{args.season} NCAA Tournament Probability Matrix ({args.n_sims:,} simulations)")
-    print("═" * 84)
+    print("=" * 84)
     print(f"{'Team':<20} {'Seed':<4} {'Region':<9} {'R32':>6} {'S16':>6} {'E8':>6} {'F4':>6} {'Final':>6} {'Champ':>6} {'E[Pts]':>6}")
-    print("─" * 84)
+    print("-" * 84)
     
     for _, row in df.iterrows():
         # Hide teams with 0% chance of making the round of 64 completely if they are first four losers? 

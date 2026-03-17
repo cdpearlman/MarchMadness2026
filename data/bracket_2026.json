@@ -42,7 +42,7 @@
     }
   },
   "final_four_matchups": [
-    ["East", "West"],
-    ["Midwest", "South"]
+    ["East", "South"],
+    ["West", "Midwest"]
   ]
 }

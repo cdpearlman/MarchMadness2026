@@ -108,3 +108,31 @@
 - Later brackets (#11+) introduce contrarian elements (Vanderbilt finals, Nebraska finals, Louisville F4) for large-pool differentiation.
 **Entry plan**: ESPN #1-25, Yahoo #1-10, single-entry contests use #1.
 **Open threads**: Results not yet validated against real tournament outcomes (tournament starts 2026-03-20).
+
+## 2026-03-17 — Full Pipeline Re-run + Championship Score Estimates
+**Area**: Data refresh, model retraining, bracket generation, scoring research
+**Work done**:
+- Re-ran full pipeline after user updated Barttorvik CSVs and re-ran download/ingest: team_matching -> data_prep -> models -> simulate -> bracket_gen.
+- Fixed Unicode crash in `src/simulate.py` (box-drawing chars `═` and `─` in print statements -> `=` and `-`).
+- Updated `ENSEMBLE_WEIGHTS` in config to `[0.5467, 0.0, 0.4533]` based on newly optimized LOSO weights (prev: [0.5139, 0.0, 0.4861]).
+- Model performance after refresh: Ensemble log-loss=0.5608, accuracy=70.1%, AUC=0.778. SHAP top features: diff_adj_em (0.724), diff_adj_d (0.292), diff_adj_o (0.156) — non-seed features dominant, no seed bias.
+- 50K-sim probability matrix generated. Top contenders: Michigan 14.2%, Duke 14.1%, Purdue 11.5%, Arizona 10.6%, Houston 8.1%, Illinois 8.0%.
+- 10-bracket portfolio generated. Champions: Florida(x2), Arizona, Iowa St.(x2), Michigan, Illinois, Purdue, Houston, Michigan St.
+- Researched offensive/defensive style and scoring averages for all top-3 seeds. Computed estimated championship game scores using Barttorvik adj_o/adj_d/adj_t with 0.93 championship factor.
+
+**Championship score estimates by bracket:**
+
+| Bracket | Champion | Matchup | Est. Score |
+|---------|----------|---------|------------|
+| 1 | Florida | Florida vs Purdue | Florida 79, Purdue 77 |
+| 2 | Arizona | Houston vs Arizona | Arizona 73, Houston 71 |
+| 3 | Iowa St. | Illinois vs Iowa St. | Iowa St. 76, Illinois 74 |
+| 4 | Michigan | Duke vs Michigan | Michigan 75, Duke 74 |
+| 5 | Illinois | Illinois vs Purdue | Illinois 80, Purdue 79 |
+| 6 | Purdue | Houston vs Purdue | Purdue 73, Houston 71 |
+| 7 | Houston | Houston vs Virginia | Houston 73, Virginia 68 |
+| 8 | Iowa St. | Houston vs Iowa St. | Iowa St. 70, Houston 68 |
+| 9 | Michigan St. | Michigan St. vs Arkansas | Michigan St. 80, Arkansas 78 |
+| 10 | Florida | Florida vs Arizona | Florida 75, Arizona 73 |
+
+**Style notes**: Houston/Virginia games trend lowest (grind pace, adj_t ~64-66). Purdue/Illinois games trend highest (both adj_o 131+, soft defense). Houston is the most consistent suppressor — all Houston finals estimated in 68-73 range.
