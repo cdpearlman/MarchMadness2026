@@ -171,9 +171,9 @@ PHYSICAL_FEATURE_START_SEASON = 2008
 # ---------------------------------------------------------------------------
 # Bracket Engine v1.5 — Probabilistic Portfolio Generation
 # ---------------------------------------------------------------------------
-BRACKET_N_TOTAL = 10_000
+BRACKET_N_TOTAL = 15_000
 BRACKET_N_SIMS = 50_000
-BRACKET_N_PORTFOLIO = 3
+BRACKET_N_PORTFOLIO = 25
 BRACKET_CHAMP_CUMULATIVE_CUTOFF = 0.80
 BRACKET_P_FLOOR = 0.20
 BRACKET_TEMP_TIERS = [
@@ -182,6 +182,7 @@ BRACKET_TEMP_TIERS = [
     (1.5, 3.0, 0.30),   # contrarian-leaning
 ]
 BRACKET_SCORE_CHUNK_SIZE = 500
+BRACKET_EDGE_CAP = 3.0  # Max leverage multiplier for edge-clamped scoring
 
 # Shared matchup ordering (used by both simulate.py and bracket_gen.py)
 MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]

@@ -65,3 +65,20 @@
 **Decision**: Earmarked for v2+. Would generate synthetic opponent brackets from ownership distributions and optimize P(our best bracket beats all opponents). Also includes generating brackets via pure Monte Carlo sampling (without temperature) and selecting portfolios from that — the theoretical ideal if model calibration is strong enough.
 **Reasoning**: Adds significant complexity (opponent simulation, larger scoring matrix). v1.5's ownership-weighted generation is a reasonable proxy — it biases toward contrarian picks without formal opponent modeling.
 **Revisit if**: v1.5 results suggest ownership weighting in generation is insufficient, or if we want to formally optimize for pool rank rather than raw score.
+
+## Edge-Clamped Leverage Scoring (not pure model E[max] or pure 1/ownership)
+**Date**: 2026-03-17
+**Context**: v1.5 portfolio selection needed a scoring metric. Three candidates: (1) pure model E[max] — model simulations as ground truth, (2) pure 1/ownership leverage — weight every correct pick by 1/field_ownership, (3) edge-clamped leverage — weight picks by min(cap, max(1.0, model_reach/ownership)).
+**Decision**: Edge-clamped leverage with cap=3.0x.
+**Reasoning**:
+- Pure model E[max] is flawed: model is ground truth for both generation AND evaluation, so optimizer selects chalk (undoing generation diversity). The model thinks Duke wins 15% of the time, so it overweights Duke picks — but so does 30% of the field.
+- Pure 1/ownership is also flawed: mathematically, when field is well-calibrated, E[P_model * pts/ownership] is approximately equal for ALL teams regardless of quality. Optimizer becomes indifferent between Duke and Penn — over-amplifies longshots.
+- Edge-clamped leverage threads the needle: only boosts picks where model disagrees with field (model_reach > ownership), never penalizes picks where model agrees. Cap prevents extreme amplification of thin edges. Results confirmed: champions shifted to model-edge teams (Illinois, Purdue, Houston) without selecting random longshots.
+**Revisit if**: Edge cap value (3.0) needs tuning, or if tournament results suggest the leverage scoring is too aggressive/conservative.
+
+## Portfolio Size = 25 with Platform-Based Prefixes
+**Date**: 2026-03-17
+**Context**: Entering brackets on ESPN (25 max), Yahoo (10 max), and single-entry contests (Kalshi, bet365, CBS).
+**Decision**: Generate a single 25-bracket portfolio. Use prefix subsets: #1-25 for ESPN, #1-10 for Yahoo, #1 for single-entry.
+**Reasoning**: The greedy portfolio selector adds brackets in order of marginal E[max] gain. Bracket #1 is the best standalone, #1-10 is the best 10-bracket portfolio, etc. No need for separate optimization runs per platform — just take prefixes. E[max] curve shows diminishing returns flatten after ~10 brackets (+0.5-0.6 marginal each beyond #10), confirming Yahoo captures most of the value.
+**Revisit if**: A platform has different scoring rules (non-ESPN standard) that would change the optimization.

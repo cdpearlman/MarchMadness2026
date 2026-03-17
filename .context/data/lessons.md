@@ -109,3 +109,15 @@
 **Root cause**: No filtering step between the simulation output (all teams) and the bracket generator's value selection (should only consider live teams).
 **Fix**: Added early First Four resolution at the top of `generate_bracket()` that identifies eliminated teams and filters them from `reach_probs` before any champion/F4 selection.
 **Rule going forward**: Any code that reads `reach_probabilities_YYYY.csv` for pick selection must filter to the 64 teams that survived First Four resolution. The simulation intentionally includes all 68 for completeness, but downstream consumers must scope to the live field.
+
+## 2026-03-17 — Model-as-ground-truth E[max] selects chalk, defeating diversity
+**What happened**: Portfolio optimizer using model Monte Carlo sims as ground truth consistently selected near-chalk brackets. Despite temperature-based generation producing diverse candidates, the "best" bracket by E[max] was always the most chalk-like one.
+**Root cause**: When model probabilities are both the generation source AND the evaluation truth, the optimizer's optimal strategy is "agree with the model as much as possible" — which is chalk. The diversity injected by temperature sampling is treated as noise to be filtered out, not signal to be preserved.
+**Fix**: Switched scoring to edge-clamped leverage: `weight = min(cap, max(1.0, model_reach / ownership))`. This introduces external signal (field ownership) that breaks the chalk-reinforcing feedback loop. Picks where the model disagrees with the field get boosted; picks where they agree score normally.
+**Rule going forward**: Never use the same model as both generator and evaluator without introducing external signal. Self-referential optimization degenerates to the mode of the distribution (chalk). Ownership data, opponent modeling, or historical calibration errors can serve as the external signal.
+
+## 2026-03-17 — Pure 1/ownership leverage gives equal EV to all teams
+**What happened**: Initial proposal for leverage scoring used `score = round_points / ownership`. Concern raised that this would over-value under-chosen teams (longshots).
+**Root cause**: Mathematical identity: when field is well-calibrated (ownership ~ true probability), `E[P_model * pts / ownership] ≈ E[pts]` for EVERY team. A 1-seed with 50% ownership and 50% model probability contributes the same expected leverage as a 16-seed with 0.1% ownership and 0.1% model probability. The optimizer becomes indifferent to team quality.
+**Fix**: Edge-clamped leverage only boosts picks where model > ownership (the model sees an edge the field doesn't). Floor at 1.0 means no pick is penalized; cap at 3.0 prevents extreme amplification.
+**Rule going forward**: When designing scoring metrics that combine model probability with ownership, ensure the metric is NOT symmetric around the calibration line. Pure division (model/ownership or 1/ownership) is symmetric and degenerates. Edge-based metrics (boost only when model > field) preserve the model's signal while rewarding contrarian picks.

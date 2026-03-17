@@ -84,3 +84,27 @@
 - Open parameters to tune: p_floor, temperature range/distribution, champion cutoff threshold, ownership's role in generation vs. pure probability
 - simulate.py needs extension to output full 63-game outcomes (not just reach probabilities)
 - Implementation not yet started
+
+## 2026-03-17 — Bracket Engine v1.5 Implementation + Edge-Clamped Leverage Scoring
+**Area**: Bracket generation (`src/bracket_gen.py`, `src/config.py`)
+**Work done**:
+- Implemented full v1.5 pipeline: champion sampling, temperature-based generation, Monte Carlo evaluation, greedy portfolio selection.
+- Fixed 3 output bugs: `final_four` JSON key mapped to wrong slot range (56-60 instead of 60-62), print report labels mismatched, missing "Finals" line.
+- Identified fundamental flaw in model-only E[max] scoring: optimizer selects chalk because model is ground truth, undoing generation diversity.
+- Analyzed pure 1/ownership leverage scoring — proved mathematically that when field is well-calibrated, E[leverage_value] is equal for ALL teams regardless of quality, making optimizer indifferent between Duke and Penn.
+- Implemented edge-clamped leverage scoring: `weight = min(cap, max(1.0, model_reach / ownership))`. Only boosts picks where model is more bullish than the field. Cap at 3.0x prevents extreme long-shot amplification.
+- Changed score matrix dtype from uint8 to uint16 (leverage scores can exceed 255). Memory: 750MB -> 1500MB.
+- Performance regression: scoring loop ~257s vs ~108s (element-wise multiply vs dot product). Acceptable for one-shot generation.
+- Results: champions shifted from over-owned (Duke/Arizona) to model-edge teams (Illinois/Purdue/Houston). Overlap improved slightly (0.86-0.87 vs 0.87-0.89).
+**Config changes**: `BRACKET_N_TOTAL` 10K->15K, added `BRACKET_EDGE_CAP = 3.0`.
+
+## 2026-03-17 — Portfolio Sizing for Multi-Platform Entry
+**Area**: Bracket generation strategy
+**Work done**:
+- Analyzed platform entry limits: ESPN (25), Yahoo (10), single-entry contests (Kalshi, bet365, CBS).
+- Bumped `BRACKET_N_PORTFOLIO` from 3 to 25 (ESPN max). Greedy portfolio means first N brackets are an optimally-selected N-bracket portfolio — take prefixes for smaller platforms.
+- Generated full 25-bracket portfolio. E[max] curve: 93.2 (1 bracket) -> 141.0 (10 brackets, Yahoo) -> 151.2 (25 brackets, ESPN). Diminishing returns flatten after ~10.
+- Champion diversity across 25: Duke(5), Michigan(4), Arizona(4), Illinois(3), Purdue(2), Houston(2), Florida(2), Connecticut(2), Michigan St.(1). All 9 pool teams represented.
+- Later brackets (#11+) introduce contrarian elements (Vanderbilt finals, Nebraska finals, Louisville F4) for large-pool differentiation.
+**Entry plan**: ESPN #1-25, Yahoo #1-10, single-entry contests use #1.
+**Open threads**: Results not yet validated against real tournament outcomes (tournament starts 2026-03-20).

@@ -1,185 +1,184 @@
-Round of 8
 Rank	Team (Seed)	% Picked	
 1st
 
 Duke
 (1)
-64.67%	
+63.91%	
 2nd
 
 Michigan
 (1)
-58.91%	
+59.8%	
 3rd
 
 Arizona
 (1)
-56.08%	
+58.15%	
 4th
 
 Florida
 (1)
-41.77%	
+41.25%	
 5th
 
 Houston
 (2)
-34%	
+35.08%	
 6th
 
 Iowa St.
 (2)
-16.41%	
+17.75%	
 7th
 
 Purdue
 (2)
-15.85%	
+15.82%	
 8th
 
 Connecticut
 (2)
-13.25%	
+13.54%	
 9th
-
-Gonzaga
-(3)
-10.08%	
-10th
 
 Illinois
 (3)
-9.17%	
+10.07%	
+10th
+
+Gonzaga
+(3)
+9.64%	
 11th
 
 Michigan St.
 (3)
-7.72%	
+8.61%	
 12th
 
 Virginia
 (3)
-7.57%	
+7.32%	
 13th
 
 Arkansas
 (4)
-6.48%	
+6.37%	
 14th
 
 St. John's
 (5)
-5.2%	
+5.29%	
 15th
 
 Alabama
 (4)
-4.86%	
+4.32%	
 16th
-
-N. Carolina
-(6)
-4.3%	
-17th
 
 Kansas
 (4)
-4.29%	
+4.14%	
+17th
+
+N. Carolina
+(6)
+3.85%	
 18th
 
 Wisconsin
 (5)
-3.02%	
+2.84%	
 19th
-
-Kentucky
-(7)
-2.98%	
-20th
 
 Vanderbilt
 (5)
-2.87%	
+2.82%	
+20th
+
+Kentucky
+(7)
+2.76%	
 21st
 
 Nebraska
 (4)
-1.92%	
-22nd
-
-Texas Tech
-(5)
 1.84%	
-23rd
+22nd
 
 Tennessee
 (6)
-1.8%	
+1.82%	
+23rd
+
+Texas Tech
+(5)
+1.77%	
 24th
 
 BYU
 (6)
-1.71%	
+1.56%	
 25th
 
 Miami (FL)
 (7)
-1.36%	
+1.29%	
 26th
 
 Ohio St.
 (8)
-1.03%	
+1%	
 27th
 
 UCLA
 (7)
-0.95%	
+0.94%	
 28th
 
 Villanova
 (8)
-0.83%	
+0.78%	
 29th
 
 Louisville
 (6)
-0.68%	
+0.66%	
 30th
 
 St. Mary's
 (7)
-0.6%	
+0.57%	
 31st
 
 Clemson
 (8)
-0.57%	
+0.55%	
 32nd
 
 Georgia
 (8)
-0.55%	
+0.54%	
 33rd
 
 Texas A&M
 (10)
-0.51%	
+0.48%	
 34th
 
 Iowa
 (9)
-0.49%	
+0.47%	
 35th
 
 Pennsylvania
 (14)
-0.46%	
+0.44%	
 36th
 
 Saint Louis
 (9)
-0.41%	
+0.38%	
 37th
 
 Missouri
@@ -187,141 +186,141 @@ Missouri
 0.31%	
 38th
 
+Santa Clara
+(10)
+0.28%	
+39th
+
 South Florida
 (11)
-0.3%	
-39th
+0.28%	
+40th
 
 TCU
 (9)
-0.29%	
-40th
-
-Santa Clara
-(10)
-0.29%	
-41st
-
-McNeese
-(12)
 0.26%	
-42nd
+41st
 
 Utah St.
 (9)
-0.26%	
-43rd
+0.25%	
+42nd
 
 Hawaii
 (13)
-0.26%	
+0.24%	
+43rd
+
+McNeese
+(12)
+0.24%	
 44th
 
 VCU
 (11)
-0.25%	
+0.23%	
 45th
 
 MOH/SMU
 (11)
-0.25%	
-46th
-
-High Point
-(12)
-0.24%	
-47th
-
-Akron
-(12)
 0.23%	
-48th
+46th
 
 LIU Brooklyn
 (16)
-0.23%	
-49th
+0.22%	
+47th
 
 TX/NCST
 (11)
-0.22%	
-50th
+0.21%	
+48th
+
+Akron
+(12)
+0.21%	
+49th
 
 UCF
 (10)
-0.21%	
-51st
-
-Siena
-(16)
 0.2%	
-52nd
+50th
+
+High Point
+(12)
+0.19%	
+51st
 
 UMBC/HOW
 (16)
-0.2%	
-53rd
-
-PV/LEH
-(16)
 0.19%	
-54th
+52nd
+
+Siena
+(16)
+0.18%	
+53rd
 
 Hofstra
 (13)
-0.19%	
+0.18%	
+54th
+
+PV/LEH
+(16)
+0.18%	
 55th
-
-Queens University
-(15)
-0.18%	
-56th
-
-Tennessee St.
-(15)
-0.18%	
-57th
-
-Troy
-(13)
-0.18%	
-58th
 
 Northern Iowa
 (12)
 0.18%	
-59th
+56th
+
+Troy
+(13)
+0.17%	
+57th
+
+Tennessee St.
+(15)
+0.17%	
+58th
 
 Idaho
+(15)
+0.17%	
+59th
+
+Queens University
 (15)
 0.17%	
 60th
 
 Wright St.
 (14)
-0.16%	
+0.15%	
 61st
 
 Furman
 (15)
-0.15%	
+0.14%	
 62nd
-
-Kennesaw St.
-(14)
-0.15%	
-63rd
 
 California Baptist
 (13)
-0.14%	
-64th
+0.13%	
+63rd
 
 N. Dak. St.
 (14)
-0.14%	
+0.13%	
+64th
+
+Kennesaw St.
+(14)
+0.13%	
 65th
 
 Texas
 (11)
-0.03%
+0.01%

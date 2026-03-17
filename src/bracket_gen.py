@@ -378,22 +378,106 @@ def generate_all_brackets(
     return bracket_picks, bracket_meta
 
 
+def build_leverage_weights(
+    sim_outcomes: np.ndarray,
+    round_points: np.ndarray,
+    ownership: dict,
+    idx_to_team: dict,
+    edge_cap: float,
+) -> np.ndarray:
+    """Build per-slot, per-sim leverage weights using edge-clamped scoring.
+
+    For each slot in each simulation, computes:
+        weight = round_points[slot] * min(edge_cap, max(1.0, model_reach / ownership))
+
+    where model_reach is estimated empirically from sim frequencies.
+
+    Returns:
+        leverage_weights: (n_sims, 63) float32
+    """
+    n_sims = sim_outcomes.shape[0]
+    n_teams = max(idx_to_team.keys()) + 1
+
+    # Map slots to ownership round keys
+    round_names = ["r64"] * 32 + ["r32"] * 16 + ["s16"] * 8 + ["e8"] * 4 + ["f4"] * 2 + ["champ"] * 1
+    round_indices = np.zeros(63, dtype=np.int32)
+    round_name_list = ["r64", "r32", "s16", "e8", "f4", "champ"]
+    round_name_to_idx = {name: i for i, name in enumerate(round_name_list)}
+    for s in range(63):
+        round_indices[s] = round_name_to_idx[round_names[s]]
+
+    # Compute model reach probabilities per team per round from sims
+    n_rounds = len(round_name_list)
+    model_reach = np.zeros((n_teams, n_rounds), dtype=np.float64)
+    for s in range(63):
+        ri = round_indices[s]
+        counts = np.bincount(sim_outcomes[:, s].astype(np.int64), minlength=n_teams)
+        model_reach[:, ri] += counts
+    # Normalize: divide by (n_sims * slots_per_round) to get per-slot reach
+    slots_per_round = [32, 16, 8, 4, 2, 1]
+    for ri, n_slots in enumerate(slots_per_round):
+        model_reach[:, ri] /= (n_sims * n_slots)
+
+    # Build ownership lookup: (n_teams, n_rounds) float32
+    own_lookup = np.zeros((n_teams, n_rounds), dtype=np.float32)
+    for ri, rn in enumerate(round_name_list):
+        round_own = ownership.get(rn, {})
+        uniform = get_uniform_ownership(rn)
+        for team_idx, team_name in idx_to_team.items():
+            own_lookup[team_idx, ri] = round_own.get(team_name, uniform)
+
+    # Compute edge: min(cap, max(1.0, model / ownership))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        edge = np.where(own_lookup > 0, model_reach / own_lookup, 1.0)
+    edge = np.clip(edge, 1.0, edge_cap).astype(np.float32)
+
+    # Print edge stats for late rounds
+    print("  Edge-leverage stats (model_reach / ownership, capped):")
+    for ri, rn in enumerate(round_name_list):
+        round_edges = edge[:, ri]
+        boosted = (round_edges > 1.01).sum()
+        if boosted > 0:
+            max_edge = round_edges.max()
+            # Find the team with highest edge
+            top_idx = int(round_edges.argmax())
+            top_name = idx_to_team.get(top_idx, "?")
+            print(f"    {rn:>5}: {boosted} teams boosted, "
+                  f"max edge={max_edge:.2f}x ({top_name})")
+
+    # Build leverage weights matrix: (n_sims, 63) float32
+    # For each sim/slot, look up the edge for the winning team at that round
+    sim_int = sim_outcomes.astype(np.int64)
+    rp32 = round_points.astype(np.float32)
+    leverage_weights = np.empty((n_sims, 63), dtype=np.float32)
+    for s in range(63):
+        ri = round_indices[s]
+        team_edges = edge[:, ri]  # (n_teams,) edge values for this round
+        leverage_weights[:, s] = rp32[s] * team_edges[sim_int[:, s]]
+
+    return leverage_weights
+
+
 def select_portfolio_greedy(
     bracket_picks: np.ndarray,
     sim_outcomes: np.ndarray,
     round_points: np.ndarray,
     n_portfolio: int,
+    ownership: dict = None,
+    idx_to_team: dict = None,
+    edge_cap: float = None,
     chunk_size: int = None,
 ) -> list[dict]:
     """Select portfolio via greedy E[max score] optimization.
 
-    Precomputes all bracket scores against simulations (uint8 matrix),
-    then runs greedy selection over the precomputed matrix.
+    Precomputes all bracket scores against simulations using edge-clamped
+    leverage weights when ownership data is provided.
 
     Returns list of dicts with index, e_max_after, marginal_gain.
     """
     if chunk_size is None:
         chunk_size = config.BRACKET_SCORE_CHUNK_SIZE
+    if edge_cap is None:
+        edge_cap = config.BRACKET_EDGE_CAP
 
     n_brackets = bracket_picks.shape[0]
     n_sims = sim_outcomes.shape[0]
@@ -402,20 +486,42 @@ def select_portfolio_greedy(
           f"against {n_sims:,} simulations...")
     start_time = time.time()
 
-    # Precompute score matrix: (n_brackets, n_sims) uint8
-    # Per-bracket dot product with preallocated buffer to avoid allocation overhead
-    print(f"  Precomputing score matrix ({n_brackets:,} x {n_sims:,})...")
+    # Build leverage weights if ownership available, else use raw round points
+    if ownership and idx_to_team:
+        print(f"  Using edge-clamped leverage scoring (cap={edge_cap:.1f}x)...")
+        lw = build_leverage_weights(
+            sim_outcomes, round_points, ownership, idx_to_team, edge_cap
+        )
+        use_leverage = True
+    else:
+        print("  Using standard scoring (no ownership data)...")
+        use_leverage = False
+
+    # Precompute score matrix: (n_brackets, n_sims) uint16
+    # uint16 needed because leverage can push scores above 255
+    score_dtype = np.uint16 if use_leverage else np.uint8
+    print(f"  Precomputing score matrix ({n_brackets:,} x {n_sims:,}, {score_dtype.__name__})...")
     score_start = time.time()
-    all_scores = np.zeros((n_brackets, n_sims), dtype=np.uint8)
-    rp32 = round_points.astype(np.float32)
-    matches_buf = np.empty((n_sims, 63), dtype=np.float32)
+    all_scores = np.zeros((n_brackets, n_sims), dtype=score_dtype)
     sim_f32 = sim_outcomes.astype(np.float32)
-    for i in range(n_brackets):
-        np.equal(bracket_picks[i].astype(np.float32), sim_f32, out=matches_buf)
-        all_scores[i] = (matches_buf @ rp32).astype(np.uint8)
-        if (i + 1) % 2000 == 0:
-            elapsed_so_far = time.time() - score_start
-            print(f"    {i+1:,}/{n_brackets:,} scored ({elapsed_so_far:.1f}s)...")
+    matches_buf = np.empty((n_sims, 63), dtype=np.float32)
+
+    if use_leverage:
+        for i in range(n_brackets):
+            np.equal(bracket_picks[i].astype(np.float32), sim_f32, out=matches_buf)
+            all_scores[i] = (matches_buf * lw).sum(axis=1).astype(score_dtype)
+            if (i + 1) % 2000 == 0:
+                elapsed_so_far = time.time() - score_start
+                print(f"    {i+1:,}/{n_brackets:,} scored ({elapsed_so_far:.1f}s)...")
+    else:
+        rp32 = round_points.astype(np.float32)
+        for i in range(n_brackets):
+            np.equal(bracket_picks[i].astype(np.float32), sim_f32, out=matches_buf)
+            all_scores[i] = (matches_buf @ rp32).astype(score_dtype)
+            if (i + 1) % 2000 == 0:
+                elapsed_so_far = time.time() - score_start
+                print(f"    {i+1:,}/{n_brackets:,} scored ({elapsed_so_far:.1f}s)...")
+
     score_elapsed = time.time() - score_start
     print(f"  Score matrix complete in {score_elapsed:.1f}s "
           f"({all_scores.nbytes / 1e6:.0f} MB)")
@@ -569,7 +675,8 @@ def main():
     # --- Stage 4: Portfolio Selection ---
     print("\n--- Stage 4: Portfolio Selection ---")
     portfolio = select_portfolio_greedy(
-        bracket_picks, sim_outcomes, round_points, args.n_portfolio
+        bracket_picks, sim_outcomes, round_points, args.n_portfolio,
+        ownership=ownership, idx_to_team=idx_to_team,
     )
 
     # --- Build output ---
@@ -581,6 +688,8 @@ def main():
             "n_portfolio": args.n_portfolio,
             "champion_pool_size": len(champion_pool),
             "p_floor": config.BRACKET_P_FLOOR,
+            "scoring": "edge_leverage" if ownership else "standard",
+            "edge_cap": config.BRACKET_EDGE_CAP if ownership else None,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         },
         "portfolio": [],
@@ -598,7 +707,7 @@ def main():
             "bracket_id": port_idx + 1,
             "champion": pick_names[62],
             "temperature": round(meta["temperature"], 3),
-            "final_four": [pick_names[i] for i in range(56, 60)],
+            "final_four": [pick_names[i] for i in range(60, 62)],
             "elite_eight": [pick_names[i] for i in range(56, 60)],
             "sweet_16": [pick_names[i] for i in range(48, 56)],
             "r32": [pick_names[i] for i in range(32, 48)],
@@ -625,7 +734,8 @@ def main():
         print(f"Bracket {bd['bracket_id']} (temp={bd['temperature']:.3f}, upsets={bd['upset_count']})")
         print("=" * 60)
         print(f"  Champion:    {bd['champion']}")
-        print(f"  Final Four:  {' | '.join(bd['final_four'])}")
+        print(f"  Finals:      {' | '.join(bd['final_four'])}")
+        print(f"  Final Four:  {' | '.join(bd['elite_eight'])}")
         print(f"  Elite Eight: {' | '.join(bd['sweet_16'])}")
         print(f"  E[max]:      {bd['e_max_score_after']}")
         print(f"  Marginal:    +{bd['marginal_gain']}")

@@ -60,31 +60,51 @@ All features computed as `TeamA_value - TeamB_value`. Defined in `config.py` usi
 - **LOSO CV** — Leave-One-Season-Out cross-validation simulates real prediction conditions
 - **Missing physical features** — pre-2008 rows fill height/experience with 0 (moot now, since training starts at 2008)
 
-## Layer 2: Bracket Optimizer
+## Layer 2: Bracket Engine v1.5 — Probabilistic Portfolio Generation
 
-### Current Approach: Analytical Dynamic Programming (`bracket_engine.py`)
-- Builds a binary tree of the full tournament bracket
-- Computes path probabilities for every team reaching every round
-- Uses DP to find optimal bracket picks that maximize expected pool score
-- Generates diverse brackets via diversity weighting to avoid near-identical outputs
-- NCAA.com scoring: R64=1pt, R32=2pts, S16=4pts, E8=8pts, F4=16pts, Championship=32pts
+### Architecture: 4-Stage Pipeline (`src/bracket_gen.py`)
 
-### Previous Approach: Monte Carlo (deprecated direction)
-Monte Carlo simulation was too greedy — a 51% favorite always won over a 49% underdog, ignoring strategic value of upsets (better next-round matchups, bracket diversity). The analytical DP approach handles this by evaluating full paths through the bracket.
+```
+Stage 1: Champion Pool
+  Select top N teams covering ~80% of championship probability mass.
+  Champions sampled proportionally (weighted random, not deterministic).
 
-### Bracket Diversity: Champion x Temperature Stratified Sampling
-The goal is to maximize the probability that ONE bracket scores extremely well, not to have all brackets be decent. The architecture uses a two-axis grid:
+Stage 2: Bracket Generation (15,000 candidates)
+  For each bracket: sample champion, draw temperature from stratified tiers.
+  Each game resolved probabilistically: p_flip = upset_score^(1/temperature)
+  where upset_score = p_underdog * (1 - ownership).
+  Only champion's path is locked; everything else is probabilistic.
 
-1. **Champion axis**: Top N champions by P(championship) from analytical path probabilities. Each bracket forces a specific champion to win every game on their path (R1 through championship).
-2. **Temperature axis**: Controls upset aggressiveness for all non-champion games via `apply_temperature()`. Low temp = chalk, high temp = chaos.
+Stage 3: Tournament Simulation (50,000 Monte Carlo sims)
+  simulate_bracket_raw() returns (n_sims, 63) winner matrix.
+  Pure model probabilities — no ownership influence.
 
-For each (champion, temp) cell: generate K candidate brackets via `simulate_bracket_with_temperature` with `forced_champion`, select the best by expected score. Default config: 5 champions x 3 temps (0.4/0.9/1.6) x K=12 = 15 brackets from 180 candidates.
+Stage 4: Greedy Portfolio Selection (25 brackets)
+  Score all 15K candidates against 50K sims using edge-clamped leverage.
+  Greedily select brackets maximizing E[max score] (submodular optimization).
+```
 
-Key design: sampling (probabilistic coin flips) over deterministic EV for non-forced picks. Deterministic temperature-adjusted EV is a step function — a game flips at one threshold. Sampling produces diverse upset combinations. K must be kept low (10-20) to avoid over-optimizing toward chalk.
+### Edge-Clamped Leverage Scoring
+Standard ESPN scoring (1/2/4/8/16/32) is modified per-pick by an edge multiplier:
+- `edge = model_reach_probability / field_ownership`
+- `weight = min(EDGE_CAP, max(1.0, edge))` — boost only where model > field, cap at 3.0x
+- Prevents: chalk convergence (model-only E[max]) and longshot amplification (pure 1/ownership)
 
-**F4 diversity layer**: Within the same forced champion, higher temperature tiers force alternative regional winners (the #2 team by regional championship probability) in non-champion regions. temp_idx=1 forces 1 alternative region, temp_idx=2 forces 2. This breaks E8/F4 convergence within same-champion brackets.
+### Key Parameters (in `config.py`)
+- `BRACKET_N_TOTAL = 15,000` — candidate brackets generated
+- `BRACKET_N_SIMS = 50,000` — Monte Carlo simulations for evaluation
+- `BRACKET_N_PORTFOLIO = 25` — portfolio size (ESPN max; take prefixes for Yahoo/single-entry)
+- `BRACKET_CHAMP_CUMULATIVE_CUTOFF = 0.80` — champion pool covers 80% of championship mass
+- `BRACKET_P_FLOOR = 0.20` — minimum upset probability to allow flipping
+- `BRACKET_TEMP_TIERS` — temperature distribution: 30% chalk (0.1-0.3), 40% moderate (0.5-1.0), 30% contrarian (1.5-3.0)
+- `BRACKET_EDGE_CAP = 3.0` — max leverage multiplier
 
-Old pod-level diversity functions remain in `bracket_engine.py` but are no longer called.
+### Scoring: ESPN Standard
+R64=1pt, R32=2pts, S16=4pts, E8=8pts, F4=16pts, Championship=32pts
+
+### Previous Approaches (deprecated)
+- **Analytical DP** (`bracket_engine.py`, still in repo): Built binary tree, computed path probs, used DP for optimal picks. Scrapped because it optimized globally instead of reacting to ownership at individual pick level.
+- **Champion x Temperature grid** (v1.0): Deterministic grid of champions x temperature tiers. Scrapped because best-of-K selection within cells converged to chalk (K too high = over-optimization).
 
 ### Backtesting
 
