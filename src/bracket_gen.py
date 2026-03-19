@@ -595,7 +595,7 @@ def main():
     parser.add_argument("--season", type=int, default=2026)
     parser.add_argument("--ownership", type=str, default="")
     parser.add_argument("--output", type=str,
-                        default=str(config.PROCESSED_DIR / "brackets_{}.json"))
+                        default=str(config.PROCESSED_DIR / ("brackets_{}_" + config.BRACKET_SCORING + ".json")))
     parser.add_argument("--n-total", type=int, default=config.BRACKET_N_TOTAL)
     parser.add_argument("--n-sims", type=int, default=config.BRACKET_N_SIMS)
     parser.add_argument("--n-portfolio", type=int, default=config.BRACKET_N_PORTFOLIO)
@@ -649,6 +649,13 @@ def main():
     print("\n--- Stage 1: Champion Pool ---")
     champion_pool = build_champion_pool(reach_probs)
 
+    # Adjust p_floor for scoring mode
+    if config.BRACKET_SCORING == "uniform":
+        effective_p_floor = config.BRACKET_P_FLOOR_UNIFORM
+        print(f"  P_FLOOR adjusted to {effective_p_floor} for uniform mode")
+    else:
+        effective_p_floor = config.BRACKET_P_FLOOR
+
     # --- Stage 2: Generate Brackets ---
     print("\n--- Stage 2: Bracket Generation ---")
     bracket_picks, bracket_meta = generate_all_brackets(
@@ -660,7 +667,7 @@ def main():
         team_to_idx=team_to_idx,
         idx_to_team=idx_to_team,
         ownership=ownership,
-        p_floor=config.BRACKET_P_FLOOR,
+        p_floor=effective_p_floor,
         reach_probs=reach_probs,
         base_bracket=base_bracket,
         regions_order=regions_order,
@@ -672,11 +679,18 @@ def main():
         args.n_sims, base_bracket, prob_cache, team_to_idx
     )
 
+    if config.BRACKET_SCORING == "uniform":
+        round_points = np.ones(63, dtype=np.float32)
+        print("  Scoring mode: uniform (1 per pick)")
+    else:
+        print("  Scoring mode: ESPN (1-2-4-8-16-32 by round)")
+
     # --- Stage 4: Portfolio Selection ---
     print("\n--- Stage 4: Portfolio Selection ---")
     portfolio = select_portfolio_greedy(
         bracket_picks, sim_outcomes, round_points, args.n_portfolio,
-        ownership=ownership, idx_to_team=idx_to_team,
+        ownership=ownership,
+        idx_to_team=idx_to_team,
     )
 
     # --- Build output ---
@@ -687,8 +701,10 @@ def main():
             "n_sims": args.n_sims,
             "n_portfolio": args.n_portfolio,
             "champion_pool_size": len(champion_pool),
-            "p_floor": config.BRACKET_P_FLOOR,
-            "scoring": "edge_leverage" if ownership else "standard",
+            "p_floor": effective_p_floor,
+            "scoring": ("uniform_leverage" if ownership else "uniform") if config.BRACKET_SCORING == "uniform" else (
+                "edge_leverage" if ownership else "standard_espn"
+            ),
             "edge_cap": config.BRACKET_EDGE_CAP if ownership else None,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         },

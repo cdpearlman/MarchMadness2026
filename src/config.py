@@ -172,17 +172,19 @@ PHYSICAL_FEATURE_START_SEASON = 2008
 # Bracket Engine v1.5 — Probabilistic Portfolio Generation
 # ---------------------------------------------------------------------------
 BRACKET_N_TOTAL = 15_000
-BRACKET_N_SIMS = 75  # start low; increase to 150/200 if brackets are incoherent
+BRACKET_N_SIMS = 150  # start low; increase to 150/200 if brackets are incoherent
 BRACKET_N_PORTFOLIO = 10
 BRACKET_CHAMP_CUMULATIVE_CUTOFF = 0.80
 BRACKET_P_FLOOR = 0.20
+BRACKET_P_FLOOR_UNIFORM = 0.05  # Lower floor for uniform mode — more games available for temperature
 BRACKET_TEMP_TIERS = [
-    (0.1, 0.3, 0.30),   # (low, high, fraction) — chalk-leaning
-    (0.5, 1.0, 0.40),   # moderate upsets
+    # (0.1, 0.3, 0.30),   # (low, high, fraction) — chalk-leaning
+    (0.8, 1.5, 0.40),   # moderate upsets
     (1.5, 3.0, 0.30),   # contrarian-leaning
 ]
 BRACKET_SCORE_CHUNK_SIZE = 1500  # process all sims in a single pass at low sim counts
 BRACKET_EDGE_CAP = 3.0  # Max leverage multiplier for edge-clamped scoring
+BRACKET_SCORING = "uniform"  # "espn" = 1-2-4-8-16-32 by round | "uniform" = 1 per pick
 
 # Shared matchup ordering (used by both simulate.py and bracket_gen.py)
 MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
